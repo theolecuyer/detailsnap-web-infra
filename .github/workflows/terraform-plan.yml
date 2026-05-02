@@ -43,7 +43,6 @@ jobs:
                     -backend-config="key=terraform.tfstate" \
                     -backend-config="region=us-east-1" \
                     -backend-config="dynamodb_table=${{ vars.TF_LOCK_TABLE }}" \
-                    -backend-config="encrypt=true" \
                     -input=false
 
             - name: Terraform Validate
