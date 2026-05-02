@@ -9,6 +9,7 @@ terraform {
   }
 
   # Backend values passed via -backend-config at init time (see .github/workflows)
+  backend "s3" {}
 }
 
 provider "aws" {
