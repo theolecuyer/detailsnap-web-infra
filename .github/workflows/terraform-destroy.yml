@@ -18,6 +18,7 @@ jobs:
     environment: production
     env:
       TF_IN_AUTOMATION: "true"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
       - name: Validate confirmation
