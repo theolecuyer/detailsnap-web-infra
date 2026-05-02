@@ -8,10 +8,7 @@ terraform {
     }
   }
 
-  # Backend values are intentionally omitted here and passed via -backend-config
-  # flags at init time (see .github/workflows). This keeps the bucket name out
-  # of source control and avoids hardcoding account-specific values.
-  backend "s3" {}
+  # Backend values passed via -backend-config at init time (see .github/workflows)
 }
 
 provider "aws" {
