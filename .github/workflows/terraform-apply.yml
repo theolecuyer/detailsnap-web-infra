@@ -41,10 +41,10 @@ jobs:
               working-directory: terraform
               run: |
                   terraform init \
-                    -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+                    -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
                     -backend-config="key=terraform.tfstate" \
                     -backend-config="region=us-east-1" \
-                    -backend-config="dynamodb_table=${{ vars.TF_LOCK_TABLE }}" \
+                    -backend-config="dynamodb_table=${{ secrets.TF_LOCK_TABLE }}" \
                     -input=false
 
             - name: Terraform Apply
