@@ -1,0 +1,122 @@
+name: Terraform Plan
+
+on:
+    pull_request:
+        paths:
+            - "terraform/**"
+
+permissions:
+    contents: read
+    pull-requests: write
+
+jobs:
+    plan:
+        name: Plan
+        runs-on: ubuntu-latest
+        env:
+            TF_IN_AUTOMATION: "true"
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+              with:
+                  terraform_version: "~1.9"
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+                  aws-region: us-east-1
+
+            - name: Terraform Init
+              id: init
+              working-directory: terraform
+              run: |
+                  terraform init \
+                    -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+                    -backend-config="key=terraform.tfstate" \
+                    -backend-config="region=us-east-1" \
+                    -backend-config="dynamodb_table=${{ vars.TF_LOCK_TABLE }}" \
+                    -backend-config="encrypt=true" \
+                    -input=false
+
+            - name: Terraform Validate
+              id: validate
+              working-directory: terraform
+              run: terraform validate -no-color
+
+            - name: Terraform Plan
+              id: plan
+              working-directory: terraform
+              run: terraform plan -no-color -input=false 2>&1 | tee plan.txt
+              continue-on-error: true
+
+            - name: Post Plan to PR
+              uses: actions/github-script@v7
+              env:
+                  PLAN_OUTCOME: ${{ steps.plan.outcome }}
+                  VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
+              with:
+                  script: |
+                      const fs = require('fs');
+                      const raw = fs.readFileSync('terraform/plan.txt', 'utf8');
+                      const plan = raw.length > 60000
+                        ? raw.substring(0, 60000) + '\n\n> ⚠️ Output truncated — see workflow logs for full plan.'
+                        : raw;
+
+                      const planOk  = process.env.PLAN_OUTCOME     === 'success';
+                      const validOk = process.env.VALIDATE_OUTCOME === 'success';
+                      const icon    = planOk ? '✅' : '❌';
+
+                      const body = [
+                        '<!-- terraform-plan-comment -->',
+                        `## ${icon} Terraform Plan`,
+                        '',
+                        `| Step | Result |`,
+                        `|------|--------|`,
+                        `| Init | ✅ |`,
+                        `| Validate | ${validOk ? '✅' : '❌'} |`,
+                        `| Plan | ${planOk ? '✅' : '❌'} |`,
+                        '',
+                        '<details><summary>Show Plan Output</summary>',
+                        '',
+                        '```hcl',
+                        plan,
+                        '```',
+                        '',
+                        '</details>',
+                        '',
+                        `> Triggered by commit \`${context.sha.substring(0, 7)}\` · [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+                      ].join('\n');
+
+                      const { data: comments } = await github.rest.issues.listComments({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: context.issue.number,
+                      });
+
+                      const existing = comments.find(c => c.body.includes('<!-- terraform-plan-comment -->'));
+                      if (existing) {
+                        await github.rest.issues.updateComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          comment_id: existing.id,
+                          body,
+                        });
+                      } else {
+                        await github.rest.issues.createComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          issue_number: context.issue.number,
+                          body,
+                        });
+                      }
+
+            - name: Fail if Plan Failed
+              if: steps.plan.outcome == 'failure'
+              run: exit 1
