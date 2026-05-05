@@ -65,7 +65,7 @@ resource "helm_release" "argocd" {
   namespace        = "argocd"
   create_namespace = true
   wait             = true
-  timeout          = 300
+  timeout          = 600
 
   set {
     name  = "server.insecure"

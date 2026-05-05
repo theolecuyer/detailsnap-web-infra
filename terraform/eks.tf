@@ -50,7 +50,7 @@ resource "aws_eks_node_group" "envs" {
   subnet_ids      = module.vpc.private_subnets
 
   ami_type        = "AL2023_x86_64_STANDARD"
-  instance_types  = ["t3.micro"]
+  instance_types  = ["t3.small"]
   release_version = data.aws_ssm_parameter.eks_ami_release_version.value
 
   launch_template {
