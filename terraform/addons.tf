@@ -57,3 +57,20 @@ resource "null_resource" "gateway_class" {
 
   depends_on = [helm_release.aws_lbc]
 }
+
+resource "helm_release" "argocd" {
+  name             = "argocd"
+  repository       = "https://argoproj.github.io/argo-helm"
+  chart            = "argo-cd"
+  namespace        = "argocd"
+  create_namespace = true
+  wait             = true
+  timeout          = 300
+
+  set {
+    name  = "server.insecure"
+    value = "true"
+  }
+
+  depends_on = [aws_eks_node_group.envs]
+}
