@@ -72,5 +72,5 @@ resource "helm_release" "argocd" {
     value = "true"
   }
 
-  depends_on = [aws_eks_node_group.envs]
+  depends_on = [helm_release.aws_lbc]
 }
