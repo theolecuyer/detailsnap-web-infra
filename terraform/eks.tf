@@ -6,10 +6,6 @@ data "aws_iam_role" "lab" {
   name = "LabRole"
 }
 
-# Tracks the latest AL2023 AMI for the cluster version.
-# To demo security patching: run terraform plan after AWS releases a new AMI —
-# this parameter updates automatically and Terraform will show a node group diff,
-# triggering a rolling replacement of all nodes.
 data "aws_ssm_parameter" "eks_ami_release_version" {
   name = "/aws/service/eks/optimized-ami/${local.cluster_version}/amazon-linux-2023/x86_64/standard/recommended/release_version"
 }

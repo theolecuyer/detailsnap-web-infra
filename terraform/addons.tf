@@ -52,7 +52,7 @@ resource "null_resource" "gateway_class" {
   }
 
   provisioner "local-exec" {
-    command = "kubectl apply -f ../k8s/gateway/gateway-class.yaml"
+    command = "aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1 && kubectl apply -f ../k8s/gateway/gateway-class.yaml"
   }
 
   depends_on = [helm_release.aws_lbc]
