@@ -21,10 +21,21 @@ resource "helm_release" "aws_lbc" {
   namespace        = "kube-system"
   create_namespace = false
   wait             = true
+  timeout          = 900
 
   set {
     name  = "clusterName"
     value = aws_eks_cluster.main.name
+  }
+
+  set {
+    name  = "awsRegion"
+    value = "us-east-1"
+  }
+
+  set {
+    name  = "awsVpcID"
+    value = module.vpc.vpc_id
   }
 
   set {
