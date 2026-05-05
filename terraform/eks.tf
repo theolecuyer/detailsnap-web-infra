@@ -31,6 +31,16 @@ resource "aws_eks_cluster" "main" {
   }
 }
 
+resource "aws_launch_template" "node" {
+  name_prefix = "detailsnap-node-"
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+}
+
 resource "aws_eks_node_group" "envs" {
   for_each = {
     qa   = { desired = 1, min = 1, max = 2 }
@@ -46,6 +56,11 @@ resource "aws_eks_node_group" "envs" {
   ami_type        = "AL2023_x86_64_STANDARD"
   instance_types  = ["t3.micro"]
   release_version = data.aws_ssm_parameter.eks_ami_release_version.value
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
 
   scaling_config {
     desired_size = each.value.desired
