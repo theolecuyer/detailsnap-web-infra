@@ -87,17 +87,6 @@ resource "helm_release" "external_secrets" {
   depends_on = [aws_eks_node_group.envs]
 }
 
-resource "null_resource" "cluster_secret_store" {
-  triggers = {
-    eso_version = helm_release.external_secrets.version
-  }
-
-  provisioner "local-exec" {
-    command = "aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1 && kubectl wait --for condition=established crd/clustersecretstores.external-secrets.io --timeout=120s && kubectl apply -f ../k8s/cluster-secret-store.yaml"
-  }
-
-  depends_on = [helm_release.external_secrets]
-}
 
 resource "helm_release" "external_dns" {
   name             = "external-dns"
