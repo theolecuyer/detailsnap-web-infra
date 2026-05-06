@@ -117,5 +117,10 @@ resource "helm_release" "external_dns" {
     value = "detailsnap"
   }
 
+  set {
+    name  = "extraArgs[0]"
+    value = "--aws-region=us-east-1"
+  }
+
   depends_on = [null_resource.gateway_api_crds, aws_eks_node_group.envs]
 }
