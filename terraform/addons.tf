@@ -93,7 +93,7 @@ resource "null_resource" "cluster_secret_store" {
   }
 
   provisioner "local-exec" {
-    command = "aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1 && kubectl apply -f ../k8s/cluster-secret-store.yaml"
+    command = "aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1 && kubectl wait --for condition=established crd/clustersecretstores.external-secrets.io --timeout=120s && kubectl apply -f ../k8s/cluster-secret-store.yaml"
   }
 
   depends_on = [helm_release.external_secrets]
