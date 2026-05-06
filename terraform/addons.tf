@@ -118,8 +118,13 @@ resource "helm_release" "external_dns" {
   }
 
   set {
-    name  = "extraArgs[0]"
-    value = "--aws-region=us-east-1"
+    name  = "env[0].name"
+    value = "AWS_DEFAULT_REGION"
+  }
+
+  set {
+    name  = "env[0].value"
+    value = "us-east-1"
   }
 
   depends_on = [null_resource.gateway_api_crds, aws_eks_node_group.envs]
