@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: qa
+resources:
+  - ../../../base/frontend
+images:
+  - name: detailsnap/frontend
+    newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/frontend
+    newTag: latest
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          env: qa
+    target:
+      kind: Deployment
+      name: frontend

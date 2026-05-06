@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: prod
+resources:
+  - ../../../base/auth-service
+  - external-secret.yaml
+images:
+  - name: detailsnap/auth-service
+    newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/auth-service
+    newTag: latest
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          env: prod
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1
+        value:
+          name: CORS_ORIGIN
+          value: https://prod.tlecuyer.codes
+    target:
+      kind: Deployment
+      name: auth-service

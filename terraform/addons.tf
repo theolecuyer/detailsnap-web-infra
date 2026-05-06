@@ -75,6 +75,19 @@ resource "helm_release" "argocd" {
   depends_on = [helm_release.aws_lbc]
 }
 
+resource "null_resource" "argocd_apps" {
+  triggers = {
+    applicationset = filesha256("${path.module}/../k8s/apps/applicationset.yaml")
+    cluster_app    = filesha256("${path.module}/../k8s/apps/cluster.yaml")
+  }
+
+  provisioner "local-exec" {
+    command = "aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1 && kubectl create namespace qa --dry-run=client -o yaml | kubectl apply -f - && kubectl create namespace uat --dry-run=client -o yaml | kubectl apply -f - && kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f - && kubectl wait --for condition=established crd/applicationsets.argoproj.io --timeout=120s && kubectl apply -f ../k8s/apps/"
+  }
+
+  depends_on = [helm_release.argocd]
+}
+
 resource "helm_release" "external_secrets" {
   name             = "external-secrets"
   repository       = "https://charts.external-secrets.io"

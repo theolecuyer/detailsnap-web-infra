@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: media-service
+  template:
+    metadata:
+      labels:
+        app: media-service
+    spec:
+      containers:
+        - name: media-service
+          image: detailsnap/media-service
+          ports:
+            - containerPort: 8083
+          envFrom:
+            - secretRef:
+                name: app-credentials
+          env:
+            - name: DB_NAME
+              value: detailsnap
+            - name: CORS_ORIGIN
+              value: http://localhost:5173
+            - name: S3_BUCKET
+              value: detailsnap-media-651084712750
+            - name: AWS_REGION
+              value: us-east-1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 10

@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: uat
+resources:
+  - ../../../base/gateway
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/hostnames/0
+        value: uat.tlecuyer.codes
+    target:
+      kind: HTTPRoute
+      name: main

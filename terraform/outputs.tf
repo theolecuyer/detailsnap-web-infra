@@ -13,3 +13,7 @@ output "media_bucket" {
 output "ecr_registry" {
   value = "${data.aws_caller_identity.current.account_id}.dkr.ecr.us-east-1.amazonaws.com"
 }
+
+output "certificate_arn" {
+  value = aws_acm_certificate_validation.main.certificate_arn
+}
