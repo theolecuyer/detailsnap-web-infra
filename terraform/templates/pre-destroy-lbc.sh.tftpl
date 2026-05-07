@@ -1,0 +1,12 @@
+#!/bin/bash
+aws eks update-kubeconfig --name ${cluster_name} --region us-east-1 || true
+for arn in $(aws elbv2 describe-load-balancers --region us-east-1 \
+  --query 'LoadBalancers[*].LoadBalancerArn' --output text); do
+  aws elbv2 delete-load-balancer --load-balancer-arn "$arn" --region us-east-1 || true
+done
+sleep 30
+for sg in $(aws ec2 describe-security-groups --region us-east-1 \
+  --filters "Name=vpc-id,Values=${vpc_id}" "Name=tag-key,Values=elbv2.k8s.aws/cluster" \
+  --query 'SecurityGroups[*].GroupId' --output text); do
+  aws ec2 delete-security-group --group-id "$sg" --region us-east-1 || true
+done

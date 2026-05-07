@@ -1,0 +1,4 @@
+#!/bin/bash
+aws eks update-kubeconfig --name ${cluster_name} --region us-east-1 || true
+kubectl delete externalsecret --all -A --ignore-not-found=true 2>/dev/null || true
+kubectl delete clustersecretstore --all --ignore-not-found=true 2>/dev/null || true

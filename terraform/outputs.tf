@@ -7,7 +7,7 @@ output "rds_host" {
 }
 
 output "media_bucket" {
-  value = aws_s3_bucket.media.bucket
+  value = module.media_bucket.s3_bucket_id
 }
 
 output "ecr_registry" {
@@ -15,5 +15,5 @@ output "ecr_registry" {
 }
 
 output "certificate_arn" {
-  value = aws_acm_certificate_validation.main.certificate_arn
+  value = module.acm.acm_certificate_arn
 }

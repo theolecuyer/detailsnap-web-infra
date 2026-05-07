@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+aws eks update-kubeconfig --name ${cluster_name} --region us-east-1
+kubectl create namespace qa --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace uat --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -
+kubectl wait --for condition=established crd/applicationsets.argoproj.io --timeout=120s
+kubectl apply -f ../k8s/apps/

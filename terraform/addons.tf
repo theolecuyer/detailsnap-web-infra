@@ -22,20 +22,10 @@ resource "null_resource" "pre_destroy_lbc" {
 
   provisioner "local-exec" {
     when    = destroy
-    command = <<-EOT
-      aws eks update-kubeconfig --name ${self.triggers.cluster_name} --region us-east-1 || true
-      # Delete ALBs created by LBC
-      for arn in $(aws elbv2 describe-load-balancers --region us-east-1 --query 'LoadBalancers[*].LoadBalancerArn' --output text); do
-        aws elbv2 delete-load-balancer --load-balancer-arn "$arn" --region us-east-1 || true
-      done
-      sleep 30
-      # Delete LBC-created security groups
-      for sg in $(aws ec2 describe-security-groups --region us-east-1 \
-        --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" "Name=tag-key,Values=elbv2.k8s.aws/cluster" \
-        --query 'SecurityGroups[*].GroupId' --output text); do
-        aws ec2 delete-security-group --group-id "$sg" --region us-east-1 || true
-      done
-    EOT
+    command = templatefile("${path.module}/templates/pre-destroy-lbc.sh.tftpl", {
+      cluster_name = self.triggers.cluster_name
+      vpc_id       = self.triggers.vpc_id
+    })
   }
 
   depends_on = [helm_release.aws_lbc]
@@ -119,7 +109,9 @@ resource "null_resource" "argocd_apps" {
   }
 
   provisioner "local-exec" {
-    command = "aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1 && kubectl create namespace qa --dry-run=client -o yaml | kubectl apply -f - && kubectl create namespace uat --dry-run=client -o yaml | kubectl apply -f - && kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f - && kubectl wait --for condition=established crd/applicationsets.argoproj.io --timeout=120s && kubectl apply -f ../k8s/apps/"
+    command = templatefile("${path.module}/templates/argocd-bootstrap.sh.tftpl", {
+      cluster_name = aws_eks_cluster.main.name
+    })
   }
 
   depends_on = [helm_release.argocd]
@@ -127,16 +119,15 @@ resource "null_resource" "argocd_apps" {
 
 resource "null_resource" "pre_destroy_eso" {
   triggers = {
-    eso_version = helm_release.external_secrets.version
+    eso_version  = helm_release.external_secrets.version
+    cluster_name = aws_eks_cluster.main.name
   }
 
   provisioner "local-exec" {
     when    = destroy
-    command = <<-EOT
-      aws eks update-kubeconfig --name detailsnap --region us-east-1 || true
-      kubectl delete externalsecret --all -A --ignore-not-found=true 2>/dev/null || true
-      kubectl delete clustersecretstore --all --ignore-not-found=true 2>/dev/null || true
-    EOT
+    command = templatefile("${path.module}/templates/pre-destroy-eso.sh.tftpl", {
+      cluster_name = self.triggers.cluster_name
+    })
   }
 
   depends_on = [helm_release.external_secrets]
@@ -158,7 +149,6 @@ resource "helm_release" "external_secrets" {
 
   depends_on = [aws_eks_node_group.system]
 }
-
 
 resource "helm_release" "external_dns" {
   name             = "external-dns"

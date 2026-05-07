@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+aws eks update-kubeconfig --name ${cluster_name} --region us-east-1
+kubectl delete pod db-init --ignore-not-found=true
+kubectl run db-init --image=mysql:8.0 --restart=Never \
+  --env="MYSQL_PWD=${db_password}" \
+  -- mysql -h ${db_host} -u ${db_user} \
+  -e "CREATE DATABASE IF NOT EXISTS detailsnap_qa; CREATE DATABASE IF NOT EXISTS detailsnap_uat; CREATE DATABASE IF NOT EXISTS detailsnap_prod;"
+kubectl wait pod/db-init --for=jsonpath='{.status.phase}'=Succeeded --timeout=120s
+kubectl delete pod db-init --ignore-not-found=true

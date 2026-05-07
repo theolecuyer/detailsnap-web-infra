@@ -55,13 +55,12 @@ resource "null_resource" "db_init" {
   }
 
   provisioner "local-exec" {
-    command = <<-EOT
-      aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1
-      kubectl run db-init --rm --wait --image=mysql:8.0 --restart=Never \
-        --env="MYSQL_PWD=${random_password.db_master.result}" \
-        -- mysql -h ${aws_db_instance.main.address} -u admin \
-        -e "CREATE DATABASE IF NOT EXISTS detailsnap_qa; CREATE DATABASE IF NOT EXISTS detailsnap_uat; CREATE DATABASE IF NOT EXISTS detailsnap_prod;"
-    EOT
+    command = templatefile("${path.module}/templates/db-init.sh.tftpl", {
+      cluster_name = aws_eks_cluster.main.name
+      db_host      = aws_db_instance.main.address
+      db_user      = aws_db_instance.main.username
+      db_password  = random_password.db_master.result
+    })
   }
 
   depends_on = [aws_eks_node_group.envs]
