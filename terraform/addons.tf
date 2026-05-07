@@ -1,3 +1,18 @@
+resource "null_resource" "wait_for_system_node" {
+  triggers = {
+    node_group_id = aws_eks_node_group.system.id
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1
+      kubectl wait nodes -l node-type=system --for=condition=Ready --timeout=300s
+    EOT
+  }
+
+  depends_on = [aws_eks_node_group.system]
+}
+
 resource "null_resource" "gateway_api_crds" {
   triggers = {
     cluster_id = aws_eks_cluster.main.id
@@ -65,7 +80,7 @@ resource "helm_release" "aws_lbc" {
     value = "system"
   }
 
-  depends_on = [null_resource.gateway_api_crds, aws_eks_node_group.system]
+  depends_on = [null_resource.gateway_api_crds, null_resource.wait_for_system_node]
 }
 
 resource "null_resource" "gateway_class" {
@@ -99,7 +114,7 @@ resource "helm_release" "argocd" {
     value = "system"
   }
 
-  depends_on = [helm_release.aws_lbc, aws_eks_node_group.system]
+  depends_on = [helm_release.aws_lbc, null_resource.wait_for_system_node]
 }
 
 resource "null_resource" "argocd_apps" {
@@ -147,7 +162,7 @@ resource "helm_release" "external_secrets" {
     value = "system"
   }
 
-  depends_on = [aws_eks_node_group.system]
+  depends_on = [null_resource.wait_for_system_node]
 }
 
 resource "helm_release" "external_dns" {
@@ -194,5 +209,5 @@ resource "helm_release" "external_dns" {
     value = "system"
   }
 
-  depends_on = [null_resource.gateway_api_crds, aws_eks_node_group.system]
+  depends_on = [null_resource.gateway_api_crds, null_resource.wait_for_system_node]
 }
