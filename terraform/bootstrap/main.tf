@@ -65,6 +65,21 @@ resource "aws_dynamodb_table" "locks" {
   }
 }
 
+locals {
+  ecr_repositories = ["frontend", "auth-service", "core-service", "media-service"]
+}
+
+resource "aws_ecr_repository" "services" {
+  for_each = toset(local.ecr_repositories)
+
+  name                 = "detailsnap/${each.key}"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
 output "state_bucket" {
   value       = aws_s3_bucket.state.bucket
   description = "Set as TF_STATE_BUCKET in GitHub Actions variables"
@@ -73,4 +88,9 @@ output "state_bucket" {
 output "lock_table" {
   value       = aws_dynamodb_table.locks.name
   description = "Set as TF_LOCK_TABLE in GitHub Actions variables"
+}
+
+output "ecr_registry" {
+  value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.us-east-1.amazonaws.com"
+  description = "ECR registry URL"
 }
