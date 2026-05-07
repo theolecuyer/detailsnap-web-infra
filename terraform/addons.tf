@@ -14,6 +14,33 @@ resource "null_resource" "gateway_api_crds" {
   depends_on = [aws_eks_node_group.envs]
 }
 
+resource "null_resource" "pre_destroy_lbc" {
+  triggers = {
+    cluster_name = aws_eks_cluster.main.name
+    vpc_id       = module.vpc.vpc_id
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      aws eks update-kubeconfig --name ${self.triggers.cluster_name} --region us-east-1 || true
+      # Delete ALBs created by LBC
+      for arn in $(aws elbv2 describe-load-balancers --region us-east-1 --query 'LoadBalancers[*].LoadBalancerArn' --output text); do
+        aws elbv2 delete-load-balancer --load-balancer-arn "$arn" --region us-east-1 || true
+      done
+      sleep 30
+      # Delete LBC-created security groups
+      for sg in $(aws ec2 describe-security-groups --region us-east-1 \
+        --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" "Name=tag-key,Values=elbv2.k8s.aws/cluster" \
+        --query 'SecurityGroups[*].GroupId' --output text); do
+        aws ec2 delete-security-group --group-id "$sg" --region us-east-1 || true
+      done
+    EOT
+  }
+
+  depends_on = [helm_release.aws_lbc]
+}
+
 resource "helm_release" "aws_lbc" {
   name             = "aws-load-balancer-controller"
   repository       = "https://aws.github.io/eks-charts"
