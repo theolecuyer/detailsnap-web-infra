@@ -1,7 +1,7 @@
 resource "random_password" "db_master" {
   length           = 24
   special          = true
-  override_special = "!#$%&*()-_=+[]{}<>:?"
+  override_special = "!#%&*()-_=+[]{}<>:?"
 }
 
 resource "aws_db_subnet_group" "main" {
@@ -47,6 +47,24 @@ resource "aws_db_instance" "main" {
   multi_az            = false
   skip_final_snapshot = true
   deletion_protection = false
+}
+
+resource "null_resource" "db_init" {
+  triggers = {
+    db_instance = aws_db_instance.main.id
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1
+      kubectl run db-init --rm --wait --image=mysql:8.0 --restart=Never \
+        --env="MYSQL_PWD=${random_password.db_master.result}" \
+        -- mysql -h ${aws_db_instance.main.address} -u admin \
+        -e "CREATE DATABASE IF NOT EXISTS detailsnap_qa; CREATE DATABASE IF NOT EXISTS detailsnap_uat; CREATE DATABASE IF NOT EXISTS detailsnap_prod;"
+    EOT
+  }
+
+  depends_on = [aws_eks_node_group.envs]
 }
 
 resource "aws_secretsmanager_secret" "db_credentials" {

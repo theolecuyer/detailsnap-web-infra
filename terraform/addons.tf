@@ -70,7 +70,12 @@ resource "helm_release" "aws_lbc" {
     value = "true"
   }
 
-  depends_on = [null_resource.gateway_api_crds, aws_eks_node_group.envs]
+  set {
+    name  = "nodeSelector.node-type"
+    value = "system"
+  }
+
+  depends_on = [null_resource.gateway_api_crds, aws_eks_node_group.system]
 }
 
 resource "null_resource" "gateway_class" {
@@ -99,7 +104,12 @@ resource "helm_release" "argocd" {
     value = "true"
   }
 
-  depends_on = [helm_release.aws_lbc]
+  set {
+    name  = "global.nodeSelector.node-type"
+    value = "system"
+  }
+
+  depends_on = [helm_release.aws_lbc, aws_eks_node_group.system]
 }
 
 resource "null_resource" "argocd_apps" {
@@ -141,7 +151,12 @@ resource "helm_release" "external_secrets" {
   wait             = true
   timeout          = 300
 
-  depends_on = [aws_eks_node_group.envs]
+  set {
+    name  = "nodeSelector.node-type"
+    value = "system"
+  }
+
+  depends_on = [aws_eks_node_group.system]
 }
 
 
@@ -184,5 +199,10 @@ resource "helm_release" "external_dns" {
     value = "us-east-1"
   }
 
-  depends_on = [null_resource.gateway_api_crds, aws_eks_node_group.envs]
+  set {
+    name  = "nodeSelector.node-type"
+    value = "system"
+  }
+
+  depends_on = [null_resource.gateway_api_crds, aws_eks_node_group.system]
 }

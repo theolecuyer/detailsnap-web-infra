@@ -18,6 +18,11 @@ patches:
         value:
           env: prod
       - op: replace
+        path: /spec/template/spec/containers/0/env/0
+        value:
+          name: DB_NAME
+          value: detailsnap_prod
+      - op: replace
         path: /spec/template/spec/containers/0/env/1
         value:
           name: CORS_ORIGIN

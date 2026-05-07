@@ -72,3 +72,33 @@ resource "aws_eks_node_group" "envs" {
     env = each.key
   }
 }
+
+resource "aws_eks_node_group" "system" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "system"
+  node_role_arn   = data.aws_iam_role.lab.arn
+  subnet_ids      = module.vpc.private_subnets
+
+  ami_type        = "AL2023_x86_64_STANDARD"
+  instance_types  = ["t3.medium"]
+  release_version = data.aws_ssm_parameter.eks_ami_release_version.value
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
+
+  scaling_config {
+    desired_size = 1
+    min_size     = 1
+    max_size     = 1
+  }
+
+  update_config {
+    max_unavailable = 1
+  }
+
+  labels = {
+    node-type = "system"
+  }
+}

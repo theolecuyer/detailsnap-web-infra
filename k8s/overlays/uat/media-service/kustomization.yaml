@@ -15,6 +15,11 @@ patches:
         value:
           env: uat
       - op: replace
+        path: /spec/template/spec/containers/0/env/0
+        value:
+          name: DB_NAME
+          value: detailsnap_uat
+      - op: replace
         path: /spec/template/spec/containers/0/env/1
         value:
           name: CORS_ORIGIN
