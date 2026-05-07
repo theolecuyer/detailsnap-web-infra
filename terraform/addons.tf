@@ -88,6 +88,23 @@ resource "null_resource" "argocd_apps" {
   depends_on = [helm_release.argocd]
 }
 
+resource "null_resource" "pre_destroy_eso" {
+  triggers = {
+    eso_version = helm_release.external_secrets.version
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      aws eks update-kubeconfig --name detailsnap --region us-east-1 || true
+      kubectl delete externalsecret --all -A --ignore-not-found=true 2>/dev/null || true
+      kubectl delete clustersecretstore --all --ignore-not-found=true 2>/dev/null || true
+    EOT
+  }
+
+  depends_on = [helm_release.external_secrets]
+}
+
 resource "helm_release" "external_secrets" {
   name             = "external-secrets"
   repository       = "https://charts.external-secrets.io"
