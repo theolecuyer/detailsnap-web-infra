@@ -76,6 +76,11 @@ resource "helm_release" "aws_lbc" {
   }
 
   set {
+    name  = "defaultTargetType"
+    value = "ip"
+  }
+
+  set {
     name  = "nodeSelector.node-type"
     value = "system"
   }
