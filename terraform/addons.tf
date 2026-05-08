@@ -81,6 +81,11 @@ resource "helm_release" "aws_lbc" {
   }
 
   set {
+    name  = "defaultScheme"
+    value = "internet-facing"
+  }
+
+  set {
     name  = "nodeSelector.node-type"
     value = "system"
   }
