@@ -1,3 +1,9 @@
+variable "github_token" {
+  description = "GitHub PAT (GH_TOKEN) for ArgoCD Image Updater git write-back"
+  type        = string
+  sensitive   = true
+}
+
 resource "random_password" "jwt_secret" {
   length  = 64
   special = false

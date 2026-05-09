@@ -269,6 +269,25 @@ resource "helm_release" "argocd_image_updater" {
   depends_on = [helm_release.argocd]
 }
 
+resource "null_resource" "image_updater_git_creds" {
+  triggers = {
+    image_updater = helm_release.argocd_image_updater.version
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1
+      kubectl create secret generic image-updater-git-creds \
+        --namespace argocd \
+        --from-literal=username=theolecuyer \
+        --from-literal=password=${var.github_token} \
+        --dry-run=client -o yaml | kubectl apply -f -
+    EOT
+  }
+
+  depends_on = [helm_release.argocd_image_updater]
+}
+
 resource "helm_release" "argo_rollouts" {
   name             = "argo-rollouts"
   repository       = "https://argoproj.github.io/argo-helm"

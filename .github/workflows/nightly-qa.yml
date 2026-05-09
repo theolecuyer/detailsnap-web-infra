@@ -129,30 +129,6 @@ jobs:
                     exit 1
                   fi
 
-    refresh-image-updater-creds:
-        name: Refresh Image Updater Credentials
-        runs-on: ubuntu-latest
-        needs: integration-test
-        if: success()
-
-        steps:
-            - name: Configure AWS credentials
-              uses: aws-actions/configure-aws-credentials@v4
-              with:
-                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-                  aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-                  aws-region: ${{ env.AWS_REGION }}
-
-            - name: Update Image Updater git credentials
-              run: |
-                  aws eks update-kubeconfig --name detailsnap --region $AWS_REGION
-                  kubectl create secret generic image-updater-git-creds \
-                    --namespace argocd \
-                    --from-literal=username=theolecuyer \
-                    --from-literal=password=${{ secrets.GH_TOKEN }} \
-                    --dry-run=client -o yaml | kubectl apply -f -
-
     notify-failure:
         name: Notify on Failure
         runs-on: ubuntu-latest
