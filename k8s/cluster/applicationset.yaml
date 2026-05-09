@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: detailsnap
+  namespace: argocd
+spec:
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - env: qa
+                - env: uat
+                - env: prod
+          - list:
+              elements:
+                - service: migrations
+                - service: gateway
+                - service: frontend
+                - service: auth-service
+                - service: core-service
+                - service: media-service
+  template:
+    metadata:
+      name: "{{env}}-{{service}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/theolecuyer/detailsnap-web-infra
+        targetRevision: main
+        path: "k8s/overlays/{{env}}/{{service}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{env}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
