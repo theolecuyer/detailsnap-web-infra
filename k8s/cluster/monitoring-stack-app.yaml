@@ -15,8 +15,6 @@ spec:
         fullnameOverride: monitoring
 
         grafana:
-          nodeSelector:
-            node-type: system
           envFromSecret: grafana-credentials
           grafana.ini:
             server:
@@ -45,8 +43,6 @@ spec:
 
         alertmanager:
           alertmanagerSpec:
-            nodeSelector:
-              node-type: system
             secrets:
               - grafana-credentials
           config:
@@ -74,8 +70,6 @@ spec:
 
         prometheus:
           prometheusSpec:
-            nodeSelector:
-              node-type: system
             serviceMonitorSelectorNilUsesHelmValues: false
             podMonitorSelectorNilUsesHelmValues: false
 
@@ -85,9 +79,7 @@ spec:
         kube-state-metrics:
           enabled: true
 
-        prometheusOperator:
-          nodeSelector:
-            node-type: system
+        prometheusOperator: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
