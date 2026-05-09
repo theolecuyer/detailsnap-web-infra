@@ -14,8 +14,8 @@ spec:
                   tagStrategy: newest-build
                   tagFilter: "regexp:^sha-[0-9a-f]{7}$"
                 - env: uat
-                  tagStrategy: newest-build
-                  tagFilter: "regexp:^sha-[0-9a-f]{7}$"
+                  tagStrategy: semver
+                  tagFilter: "regexp:^v[0-9]+\\.[0-9]+\\.[0-9]+-rc\\.[0-9]+$"
                 - env: prod
                   tagStrategy: semver
                   tagFilter: "regexp:^v[0-9]+\\.[0-9]+\\.[0-9]+$"

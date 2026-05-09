@@ -1,0 +1,56 @@
+name: Tag UAT Release Candidate
+
+on:
+    repository_dispatch:
+        types: [uat-tag]
+
+env:
+    AWS_REGION: us-east-1
+    SERVICES: "auth-service core-service media-service frontend migrations"
+
+jobs:
+    tag:
+        name: Tag ${{ github.event.client_payload.tag }} in ECR
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Login to ECR
+              id: login-ecr
+              uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
+
+            - name: Tag latest as ${{ github.event.client_payload.tag }}
+              env:
+                  RC_TAG: ${{ github.event.client_payload.tag }}
+              run: |
+                  for SERVICE in $SERVICES; do
+                    MANIFEST=$(aws ecr batch-get-image \
+                      --repository-name detailsnap/$SERVICE \
+                      --image-ids imageTag=latest \
+                      --query 'images[0].imageManifest' \
+                      --output text 2>/dev/null || echo "")
+
+                    if [ -z "$MANIFEST" ]; then
+                      echo "WARNING: no latest image for $SERVICE, skipping"
+                      continue
+                    fi
+
+                    aws ecr put-image \
+                      --repository-name detailsnap/$SERVICE \
+                      --image-tag "$RC_TAG" \
+                      --image-manifest "$MANIFEST"
+
+                    echo "Tagged $SERVICE:$RC_TAG"
+                  done
+
+            - name: Summary
+              run: |
+                  echo "### UAT Tag: ${{ github.event.client_payload.tag }}" >> $GITHUB_STEP_SUMMARY
+                  echo "Images tagged. ArgoCD Image Updater will detect the new RC tag and start the canary rollout in UAT." >> $GITHUB_STEP_SUMMARY
