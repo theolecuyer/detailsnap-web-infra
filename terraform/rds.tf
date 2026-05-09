@@ -29,6 +29,17 @@ resource "aws_security_group" "rds" {
   }
 }
 
+resource "aws_db_parameter_group" "main" {
+  name   = "detailsnap-mysql8"
+  family = "mysql8.0"
+
+  parameter {
+    name         = "max_connections"
+    value        = "300"
+    apply_method = "immediate"
+  }
+}
+
 resource "aws_db_instance" "main" {
   identifier        = "detailsnap"
   engine            = "mysql"
@@ -43,10 +54,12 @@ resource "aws_db_instance" "main" {
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds.id]
+  parameter_group_name   = aws_db_parameter_group.main.name
 
-  multi_az            = false
-  skip_final_snapshot = true
-  deletion_protection = false
+  multi_az              = false
+  skip_final_snapshot   = true
+  deletion_protection   = false
+  apply_immediately     = true
 }
 
 resource "null_resource" "db_init" {
