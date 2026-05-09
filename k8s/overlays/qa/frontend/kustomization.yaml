@@ -6,7 +6,7 @@ resources:
 images:
   - name: detailsnap/frontend
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/frontend
-    newTag: qa-nightly-25593289094
+    newTag: qa-nightly-25595939755
 patches:
   - patch: |-
       - op: add
