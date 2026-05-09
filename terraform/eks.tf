@@ -40,7 +40,7 @@ resource "aws_launch_template" "node" {
 resource "aws_eks_node_group" "envs" {
   for_each = {
     qa   = { desired = 1, min = 1, max = 2 }
-    uat  = { desired = 1, min = 1, max = 2 }
+    uat  = { desired = 2, min = 2, max = 3 }
     prod = { desired = 2, min = 2, max = 3 }
   }
 
