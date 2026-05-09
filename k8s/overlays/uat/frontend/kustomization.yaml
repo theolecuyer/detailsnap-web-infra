@@ -7,7 +7,7 @@ resources:
 images:
   - name: detailsnap/frontend
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/frontend
-    newTag: uat-v1.0.0-rc.1
+    newTag: v1.0.1-rc.1
 patches:
   - patch: |-
       - op: add
