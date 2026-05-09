@@ -1,5 +1,10 @@
 #!/bin/bash
 aws eks update-kubeconfig --name ${cluster_name} --region us-east-1 || true
+
+# Stop the LBC controller so it can't hold or recreate SGs while we clean up
+kubectl scale deployment aws-load-balancer-controller -n kube-system --replicas=0 2>/dev/null || true
+sleep 10
+
 for arn in $(aws elbv2 describe-load-balancers --region us-east-1 \
   --query 'LoadBalancers[*].LoadBalancerArn' --output text); do
   aws elbv2 delete-load-balancer --load-balancer-arn "$arn" --region us-east-1 || true
