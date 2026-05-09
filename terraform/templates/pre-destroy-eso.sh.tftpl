@@ -1,4 +1,14 @@
 #!/bin/bash
 aws eks update-kubeconfig --name ${cluster_name} --region us-east-1 || true
-kubectl delete externalsecret --all -A --ignore-not-found=true 2>/dev/null || true
-kubectl delete clustersecretstore --all --ignore-not-found=true 2>/dev/null || true
+
+# Strip finalizers first so the controller doesn't deadlock on delete
+kubectl get externalsecret -A -o json 2>/dev/null \
+  | jq -r '.items[] | "\(.metadata.namespace) \(.metadata.name)"' \
+  | while read ns name; do
+      kubectl patch externalsecret -n "$ns" "$name" \
+        --type=merge -p '{"metadata":{"finalizers":[]}}' 2>/dev/null || true
+    done
+
+kubectl delete externalsecret --all -A --ignore-not-found=true --timeout=60s 2>/dev/null || true
+kubectl delete secretstore --all -A --ignore-not-found=true --timeout=60s 2>/dev/null || true
+kubectl delete clustersecretstore --all --ignore-not-found=true --timeout=60s 2>/dev/null || true
