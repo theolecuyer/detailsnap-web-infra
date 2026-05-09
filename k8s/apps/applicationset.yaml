@@ -4,14 +4,21 @@ metadata:
   name: detailsnap
   namespace: argocd
 spec:
+  goTemplate: true
   generators:
     - matrix:
         generators:
           - list:
               elements:
                 - env: qa
+                  tagStrategy: newest-build
+                  tagFilter: "regexp:^sha-[0-9a-f]{7}$"
                 - env: uat
+                  tagStrategy: newest-build
+                  tagFilter: "regexp:^sha-[0-9a-f]{7}$"
                 - env: prod
+                  tagStrategy: semver
+                  tagFilter: "regexp:^v[0-9]+\\.[0-9]+\\.[0-9]+$"
           - list:
               elements:
                 - service: migrations
@@ -22,16 +29,24 @@ spec:
                 - service: media-service
   template:
     metadata:
-      name: "{{env}}-{{service}}"
+      name: "{{ .env }}-{{ .service }}"
+      annotations:
+        argocd-image-updater.argoproj.io/image-list: "img=651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/{{ .service }}"
+        argocd-image-updater.argoproj.io/img.update-strategy: "{{ .tagStrategy }}"
+        argocd-image-updater.argoproj.io/img.allow-tags: "{{ .tagFilter }}"
+        argocd-image-updater.argoproj.io/img.kustomize-image-name: "detailsnap/{{ .service }}"
+        argocd-image-updater.argoproj.io/write-back-method: "git:secret:argocd/image-updater-git-creds"
+        argocd-image-updater.argoproj.io/git-branch: "main"
+        argocd-image-updater.argoproj.io/write-back-target: "kustomization"
     spec:
       project: default
       source:
         repoURL: https://github.com/theolecuyer/detailsnap-web-infra
         targetRevision: main
-        path: "k8s/overlays/{{env}}/{{service}}"
+        path: "k8s/overlays/{{ .env }}/{{ .service }}"
       destination:
         server: https://kubernetes.default.svc
-        namespace: "{{env}}"
+        namespace: "{{ .env }}"
       syncPolicy:
         automated:
           prune: true

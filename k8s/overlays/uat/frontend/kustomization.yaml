@@ -25,13 +25,13 @@ patches:
             stableService: frontend
             steps:
               - setWeight: 25
-              - pause: {}
+              - pause: {duration: 2m}
               - setWeight: 50
-              - pause: {}
+              - pause: {duration: 2m}
               - setWeight: 75
-              - pause: {}
+              - pause: {duration: 2m}
               - setWeight: 100
-              - pause: {}
+              - pause: {duration: 2m}
     target:
       kind: Rollout
       name: frontend

@@ -222,6 +222,53 @@ resource "helm_release" "external_dns" {
   depends_on = [helm_release.aws_lbc, null_resource.gateway_api_crds, null_resource.wait_for_system_node]
 }
 
+resource "helm_release" "argocd_image_updater" {
+  name             = "argocd-image-updater"
+  repository       = "https://argoproj.github.io/argo-helm"
+  chart            = "argocd-image-updater"
+  namespace        = "argocd"
+  create_namespace = false
+  wait             = true
+  timeout          = 300
+
+  set {
+    name  = "config.registries[0].name"
+    value = "ECR"
+  }
+
+  set {
+    name  = "config.registries[0].prefix"
+    value = "651084712750.dkr.ecr.us-east-1.amazonaws.com"
+  }
+
+  set {
+    name  = "config.registries[0].api_url"
+    value = "https://651084712750.dkr.ecr.us-east-1.amazonaws.com"
+  }
+
+  set {
+    name  = "config.registries[0].credentials"
+    value = "awssdk:"
+  }
+
+  set {
+    name  = "config.registries[0].region"
+    value = "us-east-1"
+  }
+
+  set {
+    name  = "config.registries[0].credsexpire"
+    value = "10h"
+  }
+
+  set {
+    name  = "nodeSelector.node-type"
+    value = "system"
+  }
+
+  depends_on = [helm_release.argocd]
+}
+
 resource "helm_release" "argo_rollouts" {
   name             = "argo-rollouts"
   repository       = "https://argoproj.github.io/argo-helm"
