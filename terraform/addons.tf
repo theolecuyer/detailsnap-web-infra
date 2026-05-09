@@ -249,12 +249,7 @@ resource "helm_release" "argocd_image_updater" {
 
   set {
     name  = "config.registries[0].credentials"
-    value = "awssdk:"
-  }
-
-  set {
-    name  = "config.registries[0].credsexpire"
-    value = "10h"
+    value = "pullsecret:argocd/ecr-pull-secret"
   }
 
   set {
@@ -263,6 +258,27 @@ resource "helm_release" "argocd_image_updater" {
   }
 
   depends_on = [helm_release.argocd]
+}
+
+resource "null_resource" "ecr_pull_secret" {
+  triggers = {
+    image_updater = helm_release.argocd_image_updater.version
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1
+      TOKEN=$(aws ecr get-login-password --region us-east-1)
+      kubectl create secret docker-registry ecr-pull-secret \
+        --namespace argocd \
+        --docker-server=651084712750.dkr.ecr.us-east-1.amazonaws.com \
+        --docker-username=AWS \
+        --docker-password="$TOKEN" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    EOT
+  }
+
+  depends_on = [helm_release.argocd_image_updater]
 }
 
 resource "null_resource" "image_updater_git_creds" {

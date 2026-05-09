@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - cluster-secret-store.yaml
   - applicationset.yaml
+  - ecr-token-refresh.yaml
