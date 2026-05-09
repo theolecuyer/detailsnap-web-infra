@@ -26,7 +26,7 @@ patches:
         path: /spec/template/spec/containers/0/env/1
         value:
           name: CORS_ORIGIN
-          value: https://prod.tlecuyer.codes
+          value: https://tlecuyer.codes
       - op: replace
         path: /spec/strategy
         value:

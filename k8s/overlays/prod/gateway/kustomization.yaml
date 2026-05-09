@@ -11,6 +11,6 @@ patches:
   - patch: |-
       - op: replace
         path: /spec/hostnames/0
-        value: prod.tlecuyer.codes
+        value: tlecuyer.codes
     target:
       kind: HTTPRoute
