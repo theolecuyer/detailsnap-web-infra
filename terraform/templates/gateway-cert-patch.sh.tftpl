@@ -1,23 +1,37 @@
 #!/bin/bash
 set -e
-cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)" 2>/dev/null || cd "${repo_root}"
+cd "${repo_root}"
 
 git config user.email "terraform@detailsnap.ci"
 git config user.name "Terraform"
 git pull --rebase origin main
 
-for ENV in qa uat prod; do
-  HOSTNAME="${hostnames[${ENV}]}"
-  PATCH_FILE="k8s/overlays/$ENV/gateway/cert-patch.yaml"
-  cat > "$PATCH_FILE" <<YAML
+cat > k8s/overlays/qa/gateway/cert-patch.yaml << CERT_PATCH
 - op: replace
   path: /metadata/annotations/alb.ingress.kubernetes.io~1certificate-arn
   value: ${cert_arn}
 - op: replace
   path: /metadata/annotations/external-dns.alpha.kubernetes.io~1hostname
-  value: $HOSTNAME
-YAML
-done
+  value: qa.tlecuyer.codes
+CERT_PATCH
+
+cat > k8s/overlays/uat/gateway/cert-patch.yaml << CERT_PATCH
+- op: replace
+  path: /metadata/annotations/alb.ingress.kubernetes.io~1certificate-arn
+  value: ${cert_arn}
+- op: replace
+  path: /metadata/annotations/external-dns.alpha.kubernetes.io~1hostname
+  value: uat.tlecuyer.codes
+CERT_PATCH
+
+cat > k8s/overlays/prod/gateway/cert-patch.yaml << CERT_PATCH
+- op: replace
+  path: /metadata/annotations/alb.ingress.kubernetes.io~1certificate-arn
+  value: ${cert_arn}
+- op: replace
+  path: /metadata/annotations/external-dns.alpha.kubernetes.io~1hostname
+  value: prod.tlecuyer.codes
+CERT_PATCH
 
 git add k8s/overlays/qa/gateway/cert-patch.yaml \
         k8s/overlays/uat/gateway/cert-patch.yaml \

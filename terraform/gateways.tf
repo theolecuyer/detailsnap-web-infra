@@ -14,8 +14,7 @@ resource "null_resource" "gateway_cert_patch" {
   provisioner "local-exec" {
     command = templatefile("${path.module}/templates/gateway-cert-patch.sh.tftpl", {
       cert_arn  = module.acm.acm_certificate_arn
-      repo_root = "${path.module}/.."
-      hostnames = local.gateway_envs
+      repo_root = abspath("${path.module}/..")
     })
   }
 
