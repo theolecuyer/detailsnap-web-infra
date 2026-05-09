@@ -3,7 +3,6 @@ kind: Kustomization
 namespace: qa
 resources:
   - ../../../base/media-service
-  - external-secret.yaml
 images:
   - name: detailsnap/media-service
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/media-service

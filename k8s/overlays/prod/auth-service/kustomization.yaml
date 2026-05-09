@@ -3,7 +3,6 @@ kind: Kustomization
 namespace: prod
 resources:
   - ../../../base/auth-service
-  - external-secret.yaml
   - preview-service.yaml
 images:
   - name: detailsnap/auth-service

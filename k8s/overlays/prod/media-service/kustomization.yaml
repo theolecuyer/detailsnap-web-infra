@@ -3,7 +3,6 @@ kind: Kustomization
 namespace: prod
 resources:
   - ../../../base/media-service
-  - external-secret.yaml
   - preview-service.yaml
 images:
   - name: detailsnap/media-service

@@ -3,7 +3,6 @@ kind: Kustomization
 namespace: qa
 resources:
   - ../../../base/auth-service
-  - external-secret.yaml
 images:
   - name: detailsnap/auth-service
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/auth-service

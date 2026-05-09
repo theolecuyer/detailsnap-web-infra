@@ -3,7 +3,6 @@ kind: Kustomization
 namespace: uat
 resources:
   - ../../../base/media-service
-  - external-secret.yaml
   - canary-service.yaml
 images:
   - name: detailsnap/media-service

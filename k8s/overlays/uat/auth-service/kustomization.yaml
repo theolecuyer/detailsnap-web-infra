@@ -3,7 +3,6 @@ kind: Kustomization
 namespace: uat
 resources:
   - ../../../base/auth-service
-  - external-secret.yaml
   - canary-service.yaml
 images:
   - name: detailsnap/auth-service
