@@ -7,7 +7,7 @@ resources:
 images:
   - name: detailsnap/auth-service
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/auth-service
-    newTag: qa-nightly-25595939755
+    newTag: qa-nightly-25596099176
 patches:
   - patch: |-
       - op: add
