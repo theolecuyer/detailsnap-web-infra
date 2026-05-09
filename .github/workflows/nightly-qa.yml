@@ -1,5 +1,13 @@
-name: Nightly QA Build
+name: QA Build and Promote
 
+# Triggered by semantic-release.yml in the app repo after every PR merge.
+# Payload: { sha: "abc1234", rc_tag: "v1.0.2-rc.1" | "" }
+#
+# Promotion semantics (build once, promote many):
+#   sha-<hash>  — immutable artifact, built here, deployed to QA
+#   vX.Y.Z-rc.N — ECR retag of sha-<hash>, only created after integration tests pass
+#
+# `latest` is never pushed. Every promotion traces to a deterministic SHA.
 on:
     schedule:
         - cron: "0 8 * * *"
@@ -10,6 +18,7 @@ on:
 env:
     AWS_REGION: us-east-1
     SOURCE_REPO: theolecuyer/detailsnap-web
+    SERVICES: "auth-service core-service media-service frontend migrations"
     FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 permissions:
@@ -22,14 +31,24 @@ jobs:
         outputs:
             app_sha: ${{ steps.sha.outputs.short }}
         steps:
-            - name: Checkout source
+            # Prefer the SHA from the dispatch payload (deterministic — avoids a race
+            # where a second merge lands before this job starts and moves HEAD).
+            # Fall back to checking out the app repo for scheduled / manual runs.
+            - name: Checkout source (fallback for scheduled/manual)
+              if: github.event.client_payload.sha == ''
               uses: actions/checkout@v4
               with:
                   repository: ${{ env.SOURCE_REPO }}
                   token: ${{ secrets.GH_TOKEN }}
-            - name: Get short SHA
+
+            - name: Resolve SHA
               id: sha
-              run: echo "short=$(git rev-parse --short=7 HEAD)" >> $GITHUB_OUTPUT
+              run: |
+                  if [ -n "${{ github.event.client_payload.sha }}" ]; then
+                    echo "short=${{ github.event.client_payload.sha }}" >> $GITHUB_OUTPUT
+                  else
+                    echo "short=$(git rev-parse --short=7 HEAD)" >> $GITHUB_OUTPUT
+                  fi
 
     build:
         name: Build ${{ matrix.service }}
@@ -69,16 +88,14 @@ jobs:
               id: login-ecr
               uses: aws-actions/amazon-ecr-login@v2
 
-            - name: Build and push
+            - name: Build and push (staging tag — invisible to Image Updater)
               env:
                   REGISTRY: ${{ steps.login-ecr.outputs.registry }}
                   APP_SHA: ${{ needs.get-sha.outputs.app_sha }}
               run: |
                   IMAGE=$REGISTRY/detailsnap/${{ matrix.service }}
-                  docker build -t $IMAGE:sha-$APP_SHA ./${{ matrix.context }}
-                  docker tag $IMAGE:sha-$APP_SHA $IMAGE:latest
-                  docker push $IMAGE:sha-$APP_SHA
-                  docker push $IMAGE:latest
+                  docker build -t $IMAGE:build-$APP_SHA ./${{ matrix.context }}
+                  docker push $IMAGE:build-$APP_SHA
 
     integration-test:
         name: Integration Test
@@ -129,6 +146,108 @@ jobs:
                     exit 1
                   fi
 
+    promote-qa:
+        # Retag build-<hash> → sha-<hash> only after integration tests pass.
+        # Image Updater watches ^sha-[0-9a-f]{7}$ so QA only ever runs validated builds.
+        name: Promote build → SHA in ECR
+        runs-on: ubuntu-latest
+        needs: [get-sha, build, integration-test]
+        if: success()
+
+        steps:
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Login to ECR
+              uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
+
+            - name: Retag build-${{ needs.get-sha.outputs.app_sha }} as sha-${{ needs.get-sha.outputs.app_sha }}
+              env:
+                  BUILD_TAG: build-${{ needs.get-sha.outputs.app_sha }}
+                  SHA_TAG: sha-${{ needs.get-sha.outputs.app_sha }}
+              run: |
+                  for SERVICE in $SERVICES; do
+                    MANIFEST=$(aws ecr batch-get-image \
+                      --repository-name detailsnap/$SERVICE \
+                      --image-ids imageTag="$BUILD_TAG" \
+                      --query 'images[0].imageManifest' \
+                      --output text 2>/dev/null || echo "")
+
+                    if [ -z "$MANIFEST" ]; then
+                      echo "WARNING: $BUILD_TAG not found for $SERVICE, skipping"
+                      continue
+                    fi
+
+                    aws ecr put-image \
+                      --repository-name detailsnap/$SERVICE \
+                      --image-tag "$SHA_TAG" \
+                      --image-manifest "$MANIFEST"
+
+                    echo "Promoted $SERVICE: $BUILD_TAG → $SHA_TAG"
+                  done
+
+    promote-rc:
+        # Retag the immutable sha-<hash> image as the RC version in ECR.
+        # Only runs when:
+        #   - integration tests passed (needs: integration-test + success())
+        #   - the dispatch payload included an rc_tag (feat/fix commit, not chore/docs)
+        #
+        # ArgoCD Image Updater detects the new vX.Y.Z-rc.N tag in ECR and
+        # automatically rolls it out to UAT via canary deployment.
+        name: Promote SHA → RC in ECR
+        runs-on: ubuntu-latest
+        needs: [get-sha, promote-qa]
+        if: success() && github.event.client_payload.rc_tag != ''
+
+        steps:
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Login to ECR
+              id: login-ecr
+              uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
+
+            - name: Retag sha-${{ github.event.client_payload.sha }} as ${{ github.event.client_payload.rc_tag }}
+              env:
+                  SHA_TAG: sha-${{ github.event.client_payload.sha }}
+                  RC_TAG: ${{ github.event.client_payload.rc_tag }}
+              run: |
+                  for SERVICE in $SERVICES; do
+                    MANIFEST=$(aws ecr batch-get-image \
+                      --repository-name detailsnap/$SERVICE \
+                      --image-ids imageTag="$SHA_TAG" \
+                      --query 'images[0].imageManifest' \
+                      --output text 2>/dev/null || echo "")
+
+                    if [ -z "$MANIFEST" ]; then
+                      echo "WARNING: $SHA_TAG not found for $SERVICE, skipping"
+                      continue
+                    fi
+
+                    aws ecr put-image \
+                      --repository-name detailsnap/$SERVICE \
+                      --image-tag "$RC_TAG" \
+                      --image-manifest "$MANIFEST"
+
+                    echo "Promoted $SERVICE: $SHA_TAG → $RC_TAG"
+                  done
+
+            - name: Summary
+              run: |
+                  echo "### RC Promoted: ${{ github.event.client_payload.rc_tag }}" >> $GITHUB_STEP_SUMMARY
+                  echo "Source: \`sha-${{ github.event.client_payload.sha }}\`" >> $GITHUB_STEP_SUMMARY
+                  echo "ArgoCD Image Updater will detect the new semver RC tag and trigger the canary rollout in UAT." >> $GITHUB_STEP_SUMMARY
+
     notify-failure:
         name: Notify on Failure
         runs-on: ubuntu-latest
@@ -146,6 +265,6 @@ jobs:
                     -d "{
                       \"from\": \"nightly@system.tlecuyer.codes\",
                       \"to\": [\"theoglecuyer@gmail.com\"],
-                      \"subject\": \"Nightly QA Build Failed — sha-$LABEL\",
-                      \"html\": \"<p>The nightly QA build failed for sha <strong>$LABEL</strong>.</p><p><a href=\\\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\\\">View run</a></p>\"
+                      \"subject\": \"QA Build Failed — sha-$LABEL\",
+                      \"html\": \"<p>The QA build or integration test failed for sha <strong>$LABEL</strong>.</p><p><a href=\\\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\\\">View run</a></p>\"
                     }"
