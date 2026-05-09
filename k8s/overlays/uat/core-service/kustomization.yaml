@@ -27,7 +27,7 @@ patches:
           value: https://uat.tlecuyer.codes
       - op: replace
         path: /spec/replicas
-        value: 1
+        value: 4
       - op: replace
         path: /spec/strategy
         value:
