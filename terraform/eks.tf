@@ -39,9 +39,9 @@ resource "aws_launch_template" "node" {
 
 resource "aws_eks_node_group" "envs" {
   for_each = {
-    qa   = { desired = 1, min = 1, max = 2 }
-    uat  = { desired = 2, min = 2, max = 3 }
-    prod = { desired = 3, min = 3, max = 4 }
+    qa   = { desired = 1, min = 1, max = 2, instance_type = "t3.small" }
+    uat  = { desired = 2, min = 2, max = 3, instance_type = "t3.small" }
+    prod = { desired = 3, min = 3, max = 4, instance_type = "t3.medium" }
   }
 
   cluster_name    = aws_eks_cluster.main.name
@@ -50,7 +50,7 @@ resource "aws_eks_node_group" "envs" {
   subnet_ids      = module.vpc.private_subnets
 
   ami_type        = "AL2023_x86_64_STANDARD"
-  instance_types  = ["t3.small"]
+  instance_types  = [each.value.instance_type]
   release_version = data.aws_ssm_parameter.eks_ami_release_version.value
 
   launch_template {
