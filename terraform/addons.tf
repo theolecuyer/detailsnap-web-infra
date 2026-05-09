@@ -81,8 +81,8 @@ resource "helm_release" "aws_lbc" {
   }
 
   set {
-    name  = "extraArgs[0]"
-    value = "--default-scheme=internet-facing"
+    name  = "defaultLoadBalancerScheme"
+    value = "internet-facing"
   }
 
   set {
