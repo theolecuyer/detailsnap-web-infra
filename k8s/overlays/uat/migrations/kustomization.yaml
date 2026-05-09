@@ -3,6 +3,10 @@ kind: Kustomization
 namespace: uat
 resources:
   - ../../../base/migrations
+images:
+  - name: detailsnap/migrations
+    newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/migrations
+    newTag: qa-nightly-latest
 patches:
   - patch: |-
       - op: replace

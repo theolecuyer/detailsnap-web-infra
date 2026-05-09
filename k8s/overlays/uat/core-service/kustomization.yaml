@@ -4,6 +4,7 @@ namespace: uat
 resources:
   - ../../../base/core-service
   - external-secret.yaml
+  - canary-service.yaml
 images:
   - name: detailsnap/core-service
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/core-service
@@ -24,6 +25,24 @@ patches:
         value:
           name: CORS_ORIGIN
           value: https://uat.tlecuyer.codes
+      - op: replace
+        path: /spec/replicas
+        value: 4
+      - op: replace
+        path: /spec/strategy
+        value:
+          canary:
+            canaryService: core-service-canary
+            stableService: core-service
+            steps:
+              - setWeight: 25
+              - pause: {}
+              - setWeight: 50
+              - pause: {}
+              - setWeight: 75
+              - pause: {}
+              - setWeight: 100
+              - pause: {}
     target:
-      kind: Deployment
+      kind: Rollout
       name: core-service

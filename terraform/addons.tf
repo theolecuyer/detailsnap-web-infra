@@ -221,3 +221,25 @@ resource "helm_release" "external_dns" {
 
   depends_on = [helm_release.aws_lbc, null_resource.gateway_api_crds, null_resource.wait_for_system_node]
 }
+
+resource "helm_release" "argo_rollouts" {
+  name             = "argo-rollouts"
+  repository       = "https://argoproj.github.io/argo-helm"
+  chart            = "argo-rollouts"
+  version          = "2.38.1"
+  namespace        = "argo-rollouts"
+  create_namespace = true
+
+  # Enable the dashboard so we can see rollout progress in the UI
+  set {
+    name  = "dashboard.enabled"
+    value = "true"
+  }
+
+  set {
+    name  = "controller.nodeSelector.node-type"
+    value = "system"
+  }
+
+  depends_on = [null_resource.wait_for_system_node]
+}

@@ -1,22 +1,25 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
-  name: core-service
+  name: auth-service
 spec:
   replicas: 1
+  # strategy is patched per-environment overlay
+  strategy:
+    canary: {}
   selector:
     matchLabels:
-      app: core-service
+      app: auth-service
   template:
     metadata:
       labels:
-        app: core-service
+        app: auth-service
     spec:
       containers:
-        - name: core-service
-          image: detailsnap/core-service
+        - name: auth-service
+          image: detailsnap/auth-service
           ports:
-            - containerPort: 8082
+            - containerPort: 8081
           envFrom:
             - secretRef:
                 name: app-credentials
@@ -35,12 +38,12 @@ spec:
           readinessProbe:
             httpGet:
               path: /readyz
-              port: 8082
+              port: 8081
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8082
+              port: 8081
             initialDelaySeconds: 15
             periodSeconds: 20

@@ -4,6 +4,7 @@ namespace: prod
 resources:
   - ../../../base/core-service
   - external-secret.yaml
+  - preview-service.yaml
 images:
   - name: detailsnap/core-service
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/core-service
@@ -27,6 +28,14 @@ patches:
         value:
           name: CORS_ORIGIN
           value: https://prod.tlecuyer.codes
+      - op: replace
+        path: /spec/strategy
+        value:
+          blueGreen:
+            activeService: core-service
+            previewService: core-service-preview
+            autoPromotionEnabled: false
+            scaleDownDelaySeconds: 30
     target:
-      kind: Deployment
+      kind: Rollout
       name: core-service

@@ -3,6 +3,8 @@ kind: Kustomization
 namespace: prod
 resources:
   - ../../../base/frontend
+
+  - preview-service.yaml
 images:
   - name: detailsnap/frontend
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/frontend
@@ -16,6 +18,15 @@ patches:
         path: /spec/template/spec/nodeSelector
         value:
           env: prod
+
+      - op: replace
+        path: /spec/strategy
+        value:
+          blueGreen:
+            activeService: frontend
+            previewService: frontend-preview
+            autoPromotionEnabled: false
+            scaleDownDelaySeconds: 30
     target:
-      kind: Deployment
+      kind: Rollout
       name: frontend

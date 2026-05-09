@@ -3,7 +3,7 @@ import base64
 import re
 import urllib.request
 
-SERVICES = ['auth-service', 'core-service', 'media-service', 'frontend']
+SERVICES = ['auth-service', 'core-service', 'media-service', 'frontend', 'migrations']
 
 
 def github_api(url, token, data=None):

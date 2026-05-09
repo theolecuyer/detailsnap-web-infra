@@ -1,9 +1,11 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: media-service
 spec:
   replicas: 1
+  strategy:
+    canary: {}
   selector:
     matchLabels:
       app: media-service

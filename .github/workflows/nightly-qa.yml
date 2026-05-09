@@ -30,6 +30,8 @@ jobs:
                       context: media-service
                     - service: frontend
                       context: frontend
+                    - service: migrations
+                      context: db
 
         steps:
             - name: Checkout source
@@ -136,7 +138,7 @@ jobs:
                   REGISTRY: ${{ steps.login-ecr.outputs.registry }}
               run: |
                   QA_TAG="qa-$IMAGE_TAG"
-                  for SERVICE in auth-service core-service media-service frontend; do
+                  for SERVICE in auth-service core-service media-service frontend migrations; do
                     MANIFEST=$(aws ecr batch-get-image \
                       --repository-name detailsnap/$SERVICE \
                       --image-ids imageTag=$IMAGE_TAG \

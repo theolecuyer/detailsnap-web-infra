@@ -4,6 +4,7 @@ namespace: uat
 resources:
   - ../../../base/auth-service
   - external-secret.yaml
+  - canary-service.yaml
 images:
   - name: detailsnap/auth-service
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/auth-service
@@ -24,6 +25,24 @@ patches:
         value:
           name: CORS_ORIGIN
           value: https://uat.tlecuyer.codes
+      - op: replace
+        path: /spec/replicas
+        value: 4
+      - op: replace
+        path: /spec/strategy
+        value:
+          canary:
+            canaryService: auth-service-canary
+            stableService: auth-service
+            steps:
+              - setWeight: 25
+              - pause: {}
+              - setWeight: 50
+              - pause: {}
+              - setWeight: 75
+              - pause: {}
+              - setWeight: 100
+              - pause: {}
     target:
-      kind: Deployment
+      kind: Rollout
       name: auth-service

@@ -1,0 +1,96 @@
+name: Deploy to UAT (Canary)
+
+# Receives a repository_dispatch from the app repo when an RC tag is pushed
+on:
+  repository_dispatch:
+    types: [uat-deploy]
+
+env:
+  AWS_REGION: us-east-1
+  SERVICES: "auth-service core-service media-service frontend migrations"
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    name: Promote ${{ github.event.client_payload.tag }} to UAT
+    runs-on: ubuntu-latest
+
+    steps:
+      # Pin actions to full SHAs for supply chain security
+      - name: Checkout infra repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4.0.2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076  # v2.0.1
+
+      # Retag the nightly image as uat-<tag> so UAT has a stable, traceable reference
+      - name: Retag images for UAT
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          RC_TAG: ${{ github.event.client_payload.tag }}
+        run: |
+          UAT_TAG="uat-${RC_TAG}"
+          echo "Retagging nightly images as ${UAT_TAG}"
+
+          # Pull the nightly manifest and push under the UAT tag
+          for SERVICE in $SERVICES; do
+            MANIFEST=$(aws ecr batch-get-image \
+              --repository-name detailsnap/$SERVICE \
+              --image-ids imageTag=latest \
+              --query 'images[0].imageManifest' \
+              --output text 2>/dev/null || echo "")
+
+            if [ -z "$MANIFEST" ]; then
+              echo "WARNING: no latest image found for $SERVICE, skipping"
+              continue
+            fi
+
+            aws ecr put-image \
+              --repository-name detailsnap/$SERVICE \
+              --image-tag "$UAT_TAG" \
+              --image-manifest "$MANIFEST"
+
+            echo "Tagged $SERVICE → $UAT_TAG"
+          done
+
+      # Update kustomization image tags so ArgoCD picks up the new version
+      - name: Update UAT kustomization tags
+        env:
+          RC_TAG: ${{ github.event.client_payload.tag }}
+        run: |
+          UAT_TAG="uat-${RC_TAG}"
+          git config user.email "ci@detailsnap.io"
+          git config user.name "Detailsnap CI"
+
+          for SERVICE in $SERVICES; do
+            FILE="k8s/overlays/uat/${SERVICE}/kustomization.yaml"
+            if [ -f "$FILE" ]; then
+              sed -i "s/newTag: .*/newTag: ${UAT_TAG}/" "$FILE"
+              echo "Updated $FILE → $UAT_TAG"
+            fi
+          done
+
+          git add k8s/overlays/uat/
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: deploy ${RC_TAG} to UAT [skip ci]"
+          git push origin main
+
+      - name: Summary
+        run: |
+          echo "### UAT Deploy Complete" >> $GITHUB_STEP_SUMMARY
+          echo "Tag: \`${{ github.event.client_payload.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "ArgoCD will sync UAT and start the canary rollout." >> $GITHUB_STEP_SUMMARY
+          echo "Promote with: \`kubectl argo rollouts promote <service> -n uat\`" >> $GITHUB_STEP_SUMMARY

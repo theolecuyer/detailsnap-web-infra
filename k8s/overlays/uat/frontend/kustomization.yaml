@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: uat
 resources:
   - ../../../base/frontend
+  - canary-service.yaml
 images:
   - name: detailsnap/frontend
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/frontend
@@ -13,6 +14,24 @@ patches:
         path: /spec/template/spec/nodeSelector
         value:
           env: uat
+      - op: replace
+        path: /spec/replicas
+        value: 4
+      - op: replace
+        path: /spec/strategy
+        value:
+          canary:
+            canaryService: frontend-canary
+            stableService: frontend
+            steps:
+              - setWeight: 25
+              - pause: {}
+              - setWeight: 50
+              - pause: {}
+              - setWeight: 75
+              - pause: {}
+              - setWeight: 100
+              - pause: {}
     target:
-      kind: Deployment
+      kind: Rollout
       name: frontend

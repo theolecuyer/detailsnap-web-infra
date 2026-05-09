@@ -13,13 +13,10 @@ spec:
       restartPolicy: Never
       containers:
         - name: flyway
-          image: flyway/flyway:10
-          command: ["/bin/sh", "-c"]
+          image: detailsnap/migrations
           args:
-            - |
-              /flyway/flyway \
-                -url="jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true" \
-                migrate
+            - migrate
+            - -url=jdbc:mysql://$(DB_HOST):$(DB_PORT)/$(DB_NAME)?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true
           env:
             - name: DB_HOST
               valueFrom:
@@ -43,10 +40,3 @@ spec:
                   key: DB_PASSWORD
             - name: DB_NAME
               value: detailsnap
-          volumeMounts:
-            - name: migrations
-              mountPath: /flyway/sql
-      volumes:
-        - name: migrations
-          configMap:
-            name: flyway-migrations

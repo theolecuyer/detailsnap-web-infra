@@ -25,5 +25,5 @@ patches:
           name: CORS_ORIGIN
           value: https://qa.tlecuyer.codes
     target:
-      kind: Deployment
+      kind: Rollout
       name: auth-service
