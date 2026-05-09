@@ -66,7 +66,7 @@ resource "aws_dynamodb_table" "locks" {
 }
 
 locals {
-  ecr_repositories = ["frontend", "auth-service", "core-service", "media-service"]
+  ecr_repositories = ["frontend", "auth-service", "core-service", "media-service", "migrations"]
 }
 
 resource "aws_ecr_repository" "services" {
