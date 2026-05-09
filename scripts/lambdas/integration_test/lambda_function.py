@@ -93,7 +93,7 @@ if [ "$RESULT" != "success" ]; then
   LOGS=$(docker compose logs 2>&1 | tail -200)
 fi
 
-SSM_VALUE=$(jq -n --arg result "$RESULT" --arg logs "$LOGS" '{"result":$result,"logs":$logs}' | cut -c1-4096)
+SSM_VALUE=$(jq -n --arg result "$RESULT" --arg logs "$LOGS" '{{"result":$result,"logs":$logs}}' | cut -c1-4096)
 aws ssm put-parameter --region us-east-1 \\
   --name "{param_name}" \\
   --value "$SSM_VALUE" \\
