@@ -1,0 +1,100 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-stack
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: "67.9.0"
+    helm:
+      releaseName: monitoring
+      values: |
+        fullnameOverride: monitoring
+
+        grafana:
+          nodeSelector:
+            node-type: system
+          envFromSecret: grafana-credentials
+          grafana.ini:
+            server:
+              root_url: https://grafana.tlecuyer.codes
+            auth:
+              disable_login_form: true
+            auth.github:
+              enabled: true
+              allow_sign_up: true
+              scopes: user:email,read:org
+              auth_url: https://github.com/login/oauth/authorize
+              token_url: https://github.com/login/oauth/access_token
+              api_url: https://api.github.com/user
+              client_id: $__env{GF_AUTH_GITHUB_CLIENT_ID}
+              client_secret: $__env{GF_AUTH_GITHUB_CLIENT_SECRET}
+            smtp:
+              enabled: true
+              host: smtp.resend.com:587
+              user: resend
+              password: $__env{GF_SMTP_PASSWORD}
+              from_address: alerts@tlecuyer.codes
+              from_name: Grafana Alerts
+              startTLS_policy: MandatoryStartTLS
+          service:
+            type: ClusterIP
+
+        alertmanager:
+          alertmanagerSpec:
+            nodeSelector:
+              node-type: system
+            secrets:
+              - grafana-credentials
+          config:
+            global:
+              smtp_from: alerts@tlecuyer.codes
+              smtp_smarthost: smtp.resend.com:587
+              smtp_auth_username: resend
+              smtp_auth_password_file: /etc/alertmanager/secrets/grafana-credentials/GF_SMTP_PASSWORD
+            route:
+              group_by: ['alertname', 'cluster', 'namespace']
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 4h
+              receiver: 'null'
+              routes:
+                - matchers:
+                    - severity = "critical"
+                  receiver: email
+            receivers:
+              - name: 'null'
+              - name: email
+                email_configs:
+                  - to: theoglecuyer@gmail.com
+                    require_tls: true
+
+        prometheus:
+          prometheusSpec:
+            nodeSelector:
+              node-type: system
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+
+        nodeExporter:
+          enabled: true
+
+        kube-state-metrics:
+          enabled: true
+
+        prometheusOperator:
+          nodeSelector:
+            node-type: system
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

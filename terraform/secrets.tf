@@ -14,6 +14,11 @@ resource "aws_secretsmanager_secret" "jwt" {
   recovery_window_in_days = 0
 }
 
+resource "aws_secretsmanager_secret" "grafana_oauth" {
+  name                    = "detailsnap/grafana-oauth"
+  recovery_window_in_days = 0
+}
+
 resource "aws_secretsmanager_secret_version" "jwt" {
   secret_id = aws_secretsmanager_secret.jwt.id
   secret_string = jsonencode({

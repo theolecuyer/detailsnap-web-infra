@@ -4,3 +4,5 @@ resources:
   - cluster-secret-store.yaml
   - applicationset.yaml
   - ecr-token-refresh.yaml
+  - monitoring-infra-app.yaml
+  - monitoring-stack-app.yaml
