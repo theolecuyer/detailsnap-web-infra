@@ -4,7 +4,17 @@ for arn in $(aws elbv2 describe-load-balancers --region us-east-1 \
   --query 'LoadBalancers[*].LoadBalancerArn' --output text); do
   aws elbv2 delete-load-balancer --load-balancer-arn "$arn" --region us-east-1 || true
 done
-sleep 30
+
+echo "Waiting for ALB ENIs to be released..."
+for i in $(seq 1 24); do
+  eni_count=$(aws ec2 describe-network-interfaces --region us-east-1 \
+    --filters "Name=vpc-id,Values=${vpc_id}" "Name=description,Values=*ELB*" \
+    --query 'length(NetworkInterfaces)' --output text)
+  [ "$eni_count" = "0" ] && break
+  echo "  $eni_count ENI(s) still attached, waiting 10s..."
+  sleep 10
+done
+
 for sg in $(aws ec2 describe-security-groups --region us-east-1 \
   --filters "Name=vpc-id,Values=${vpc_id}" \
   --query 'SecurityGroups[?starts_with(GroupName, `k8s-`)].GroupId' --output text); do
