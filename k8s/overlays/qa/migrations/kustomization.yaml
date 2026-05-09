@@ -3,7 +3,6 @@ kind: Kustomization
 namespace: qa
 resources:
   - ../../../base/migrations
-  - external-secret.yaml
 images:
   - name: detailsnap/migrations
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/migrations
