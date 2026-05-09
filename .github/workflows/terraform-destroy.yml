@@ -54,4 +54,9 @@ jobs:
 
             - name: Terraform Destroy
               working-directory: terraform
-              run: terraform destroy -auto-approve -input=false -var="github_token=dummy"
+              run: |
+                  terraform destroy -auto-approve -input=false \
+                    -var="github_token=dummy" \
+                    -var="grafana_github_client_id=dummy" \
+                    -var="grafana_github_client_secret=dummy" \
+                    -var="resend_api_key=dummy"
