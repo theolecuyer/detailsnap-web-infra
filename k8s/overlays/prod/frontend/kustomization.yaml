@@ -8,7 +8,7 @@ resources:
 images:
   - name: detailsnap/frontend
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/frontend
-    newTag: latest
+    newTag: prod-v1.0.0
 patches:
   - patch: |-
       - op: replace
