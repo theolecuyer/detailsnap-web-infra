@@ -6,7 +6,7 @@ for arn in $(aws elbv2 describe-load-balancers --region us-east-1 \
 done
 
 echo "Waiting for ALB ENIs to be released..."
-for i in $(seq 1 24); do
+for i in $(seq 1 36); do
   eni_count=$(aws ec2 describe-network-interfaces --region us-east-1 \
     --filters "Name=vpc-id,Values=${vpc_id}" "Name=description,Values=*ELB*" \
     --query 'length(NetworkInterfaces)' --output text)
@@ -20,8 +20,30 @@ for tg in $(aws elbv2 describe-target-groups --region us-east-1 \
   aws elbv2 delete-target-group --target-group-arn "$tg" --region us-east-1 || true
 done
 
+# Revoke all rules from k8s-managed SGs first to break circular references
 for sg in $(aws ec2 describe-security-groups --region us-east-1 \
   --filters "Name=vpc-id,Values=${vpc_id}" \
   --query 'SecurityGroups[?starts_with(GroupName, `k8s-`)].GroupId' --output text); do
-  aws ec2 delete-security-group --group-id "$sg" --region us-east-1 || true
+  aws ec2 revoke-security-group-ingress --group-id "$sg" \
+    --ip-permissions "$(aws ec2 describe-security-groups --group-ids "$sg" \
+      --query 'SecurityGroups[0].IpPermissions' --output json)" \
+    --region us-east-1 2>/dev/null || true
+  aws ec2 revoke-security-group-egress --group-id "$sg" \
+    --ip-permissions "$(aws ec2 describe-security-groups --group-ids "$sg" \
+      --query 'SecurityGroups[0].IpPermissionsEgress' --output json)" \
+    --region us-east-1 2>/dev/null || true
+done
+
+# Retry SG deletion — may need a few attempts as ENIs finish releasing
+echo "Deleting k8s-managed security groups..."
+for attempt in $(seq 1 6); do
+  remaining=0
+  for sg in $(aws ec2 describe-security-groups --region us-east-1 \
+    --filters "Name=vpc-id,Values=${vpc_id}" \
+    --query 'SecurityGroups[?starts_with(GroupName, `k8s-`)].GroupId' --output text); do
+    aws ec2 delete-security-group --group-id "$sg" --region us-east-1 2>/dev/null || remaining=$((remaining+1))
+  done
+  [ "$remaining" = "0" ] && break
+  echo "  $remaining SG(s) still in use, waiting 10s..."
+  sleep 10
 done
