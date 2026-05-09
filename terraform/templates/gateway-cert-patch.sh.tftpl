@@ -4,7 +4,7 @@ cd "${repo_root}"
 
 git config user.email "terraform@detailsnap.ci"
 git config user.name "Terraform"
-git pull --rebase origin main
+git pull --rebase --autostash origin main
 
 cat > k8s/overlays/qa/gateway/cert-patch.yaml << CERT_PATCH
 - op: replace
