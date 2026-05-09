@@ -1,13 +1,6 @@
 name: QA Build and Promote
 
 # Triggered by semantic-release.yml in the app repo after every PR merge.
-# Payload: { sha: "abc1234", rc_tag: "v1.0.2-rc.1" | "" }
-#
-# Promotion semantics (build once, promote many):
-#   sha-<hash>  — immutable artifact, built here, deployed to QA
-#   vX.Y.Z-rc.N — ECR retag of sha-<hash>, only created after integration tests pass
-#
-# `latest` is never pushed. Every promotion traces to a deterministic SHA.
 on:
     schedule:
         - cron: "0 8 * * *"
@@ -31,9 +24,6 @@ jobs:
         outputs:
             app_sha: ${{ steps.sha.outputs.short }}
         steps:
-            # Prefer the SHA from the dispatch payload (deterministic — avoids a race
-            # where a second merge lands before this job starts and moves HEAD).
-            # Fall back to checking out the app repo for scheduled / manual runs.
             - name: Checkout source (fallback for scheduled/manual)
               if: github.event.client_payload.sha == ''
               uses: actions/checkout@v4
@@ -192,13 +182,6 @@ jobs:
                   done
 
     promote-rc:
-        # Retag the immutable sha-<hash> image as the RC version in ECR.
-        # Only runs when:
-        #   - integration tests passed (needs: integration-test + success())
-        #   - the dispatch payload included an rc_tag (feat/fix commit, not chore/docs)
-        #
-        # ArgoCD Image Updater detects the new vX.Y.Z-rc.N tag in ECR and
-        # automatically rolls it out to UAT via canary deployment.
         name: Promote SHA → RC in ECR
         runs-on: ubuntu-latest
         needs: [get-sha, promote-qa]

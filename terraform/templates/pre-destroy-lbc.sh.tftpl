@@ -3,7 +3,7 @@ aws eks update-kubeconfig --name ${cluster_name} --region us-east-1 || true
 
 # Stop the LBC controller so it can't hold or recreate SGs while we clean up
 kubectl scale deployment aws-load-balancer-controller -n kube-system --replicas=0 2>/dev/null || true
-sleep 10
+sleep 30
 
 for arn in $(aws elbv2 describe-load-balancers --region us-east-1 \
   --query 'LoadBalancers[*].LoadBalancerArn' --output text); do
@@ -25,18 +25,37 @@ for tg in $(aws elbv2 describe-target-groups --region us-east-1 \
   aws elbv2 delete-target-group --target-group-arn "$tg" --region us-east-1 || true
 done
 
+# Detach k8s SGs from node ENIs — LBC attaches the backend SG directly to node
+# network interfaces; as long as nodes are running those ENIs hold a reference
+# that prevents SG deletion.
+echo "Detaching k8s SGs from node ENIs..."
+for sg in $(aws ec2 describe-security-groups --region us-east-1 \
+  --filters "Name=vpc-id,Values=${vpc_id}" \
+  --query 'SecurityGroups[?starts_with(GroupName, `k8s-`)].GroupId' --output text); do
+  for eni in $(aws ec2 describe-network-interfaces --region us-east-1 \
+    --filters "Name=group-id,Values=$sg" "Name=vpc-id,Values=${vpc_id}" \
+    --query 'NetworkInterfaces[*].NetworkInterfaceId' --output text); do
+    new_sgs=$(aws ec2 describe-network-interfaces --network-interface-ids "$eni" --region us-east-1 \
+      --query "NetworkInterfaces[0].Groups[?GroupId!='$sg'].GroupId" --output text)
+    if [ -n "$new_sgs" ]; then
+      aws ec2 modify-network-interface-attribute --network-interface-id "$eni" \
+        --groups $new_sgs --region us-east-1 2>/dev/null || true
+    fi
+  done
+done
+
 # Revoke all rules from k8s-managed SGs first to break circular references
 for sg in $(aws ec2 describe-security-groups --region us-east-1 \
   --filters "Name=vpc-id,Values=${vpc_id}" \
   --query 'SecurityGroups[?starts_with(GroupName, `k8s-`)].GroupId' --output text); do
-  aws ec2 revoke-security-group-ingress --group-id "$sg" \
-    --ip-permissions "$(aws ec2 describe-security-groups --group-ids "$sg" \
-      --query 'SecurityGroups[0].IpPermissions' --output json)" \
-    --region us-east-1 2>/dev/null || true
-  aws ec2 revoke-security-group-egress --group-id "$sg" \
-    --ip-permissions "$(aws ec2 describe-security-groups --group-ids "$sg" \
-      --query 'SecurityGroups[0].IpPermissionsEgress' --output json)" \
-    --region us-east-1 2>/dev/null || true
+  ingress=$(aws ec2 describe-security-groups --group-ids "$sg" --region us-east-1 \
+    --query 'SecurityGroups[0].IpPermissions' --output json)
+  egress=$(aws ec2 describe-security-groups --group-ids "$sg" --region us-east-1 \
+    --query 'SecurityGroups[0].IpPermissionsEgress' --output json)
+  [ "$ingress" != "[]" ] && aws ec2 revoke-security-group-ingress --group-id "$sg" \
+    --ip-permissions "$ingress" --region us-east-1 2>/dev/null || true
+  [ "$egress" != "[]" ] && aws ec2 revoke-security-group-egress --group-id "$sg" \
+    --ip-permissions "$egress" --region us-east-1 2>/dev/null || true
 done
 
 # Retry SG deletion — may need a few attempts as ENIs finish releasing
