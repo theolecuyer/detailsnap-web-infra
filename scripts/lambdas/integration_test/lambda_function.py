@@ -1,5 +1,6 @@
 import boto3
 import base64
+import json
 import time
 import os
 
@@ -75,8 +76,8 @@ echo '{compose_b64}' | base64 -d > /tmp/compose.yaml
 cd /tmp
 docker compose up -d
 
-RESULT="failure: services did not become healthy after 5 minutes"
-for i in $(seq 1 20); do
+RESULT="failure: services did not become healthy after 7.5 minutes"
+for i in $(seq 1 30); do
   sleep 15
   if curl -sf http://localhost:8081/healthz >/dev/null 2>&1 && \\
      curl -sf http://localhost:8082/healthz >/dev/null 2>&1 && \\
@@ -84,16 +85,18 @@ for i in $(seq 1 20); do
     RESULT="success"
     break
   fi
-  echo "Attempt $i/20: not healthy yet"
+  echo "Attempt $i/30: not healthy yet"
 done
 
+LOGS=""
 if [ "$RESULT" != "success" ]; then
-  docker compose logs 2>&1 | tail -100
+  LOGS=$(docker compose logs 2>&1 | tail -200)
 fi
 
+SSM_VALUE=$(jq -n --arg result "$RESULT" --arg logs "$LOGS" '{"result":$result,"logs":$logs}' | cut -c1-4096)
 aws ssm put-parameter --region us-east-1 \\
   --name "{param_name}" \\
-  --value "$RESULT" \\
+  --value "$SSM_VALUE" \\
   --type String \\
   --overwrite
 
@@ -126,12 +129,22 @@ aws ec2 terminate-instances --region us-east-1 --instance-ids "$INSTANCE_ID"
         time.sleep(30)
         try:
             param = ssm_client.get_parameter(Name=param_name)
-            result = param['Parameter']['Value']
+            raw = param['Parameter']['Value']
             ssm_client.delete_parameter(Name=param_name)
             try:
                 ec2.terminate_instances(InstanceIds=[instance_id])
             except Exception:
                 pass
+            try:
+                parsed = json.loads(raw)
+                result = parsed.get('result', raw)
+                logs = parsed.get('logs', '')
+            except Exception:
+                result = raw
+                logs = ''
+            if logs:
+                print("=== docker compose logs ===")
+                print(logs)
             return {'success': result == 'success', 'message': result, 'instance_id': instance_id}
         except ssm_client.exceptions.ParameterNotFound:
             print(f"Waiting for result... attempt {attempt + 1}/28")
