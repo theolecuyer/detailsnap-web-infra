@@ -252,11 +252,6 @@ resource "helm_release" "argocd_image_updater" {
   }
 
   set {
-    name  = "config.registries[0].region"
-    value = "us-east-1"
-  }
-
-  set {
     name  = "config.registries[0].credsexpire"
     value = "10h"
   }
