@@ -1,0 +1,29 @@
+#!/bin/bash
+set -e
+cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)" 2>/dev/null || cd "${repo_root}"
+
+git config user.email "terraform@detailsnap.ci"
+git config user.name "Terraform"
+git pull --rebase origin main
+
+for ENV in qa uat prod; do
+  HOSTNAME="${hostnames[${ENV}]}"
+  PATCH_FILE="k8s/overlays/$ENV/gateway/cert-patch.yaml"
+  cat > "$PATCH_FILE" <<YAML
+- op: replace
+  path: /metadata/annotations/alb.ingress.kubernetes.io~1certificate-arn
+  value: ${cert_arn}
+- op: replace
+  path: /metadata/annotations/external-dns.alpha.kubernetes.io~1hostname
+  value: $HOSTNAME
+YAML
+done
+
+git add k8s/overlays/qa/gateway/cert-patch.yaml \
+        k8s/overlays/uat/gateway/cert-patch.yaml \
+        k8s/overlays/prod/gateway/cert-patch.yaml
+
+git diff --cached --quiet && exit 0
+
+git commit -m "chore: update gateway cert ARN [skip ci]"
+git push origin main

@@ -6,20 +6,16 @@ locals {
   }
 }
 
-resource "null_resource" "gateways" {
-  for_each = local.gateway_envs
-
+resource "null_resource" "gateway_cert_patch" {
   triggers = {
     cert_arn = module.acm.acm_certificate_arn
-    hostname  = each.value
   }
 
   provisioner "local-exec" {
-    command = templatefile("${path.module}/templates/apply-gateway.sh.tftpl", {
-      cluster_name = aws_eks_cluster.main.name
-      namespace    = each.key
-      hostname     = each.value
-      cert_arn     = module.acm.acm_certificate_arn
+    command = templatefile("${path.module}/templates/gateway-cert-patch.sh.tftpl", {
+      cert_arn  = module.acm.acm_certificate_arn
+      repo_root = "${path.module}/.."
+      hostnames = local.gateway_envs
     })
   }
 

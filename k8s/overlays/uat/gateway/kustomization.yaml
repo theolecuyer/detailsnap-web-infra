@@ -4,6 +4,10 @@ namespace: uat
 resources:
   - ../../../base/gateway
 patches:
+  - path: cert-patch.yaml
+    target:
+      kind: Gateway
+      name: main
   - patch: |-
       - op: replace
         path: /spec/hostnames/0

@@ -1,0 +1,6 @@
+- op: replace
+  path: /metadata/annotations/alb.ingress.kubernetes.io~1certificate-arn
+  value: PLACEHOLDER
+- op: replace
+  path: /metadata/annotations/external-dns.alpha.kubernetes.io~1hostname
+  value: uat.tlecuyer.codes
