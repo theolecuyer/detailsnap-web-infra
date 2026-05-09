@@ -46,7 +46,8 @@ def lambda_handler(event, context):
             {'Name': 'defaultForAz', 'Values': ['true']},
         ]
     )
-    subnet_id = subnet_resp['Subnets'][0]['SubnetId']
+    subnets = [s for s in subnet_resp['Subnets'] if s['AvailabilityZone'] != 'us-east-1e']
+    subnet_id = subnets[0]['SubnetId']
 
     auth_flag = f'-H "Authorization: token {github_token}"' if github_token else ''
 
