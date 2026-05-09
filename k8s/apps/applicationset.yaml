@@ -15,10 +15,10 @@ spec:
                   tagFilter: "regexp:^sha-[0-9a-f]{7}$"
                 - env: uat
                   tagStrategy: semver
-                  tagFilter: "regexp:^v[0-9]+\\.[0-9]+\\.[0-9]+-rc\\.[0-9]+$"
+                  tagFilter: "regexp:^v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+$"
                 - env: prod
                   tagStrategy: semver
-                  tagFilter: "regexp:^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+                  tagFilter: "regexp:^v[0-9]+.[0-9]+.[0-9]+$"
           - list:
               elements:
                 - service: migrations
