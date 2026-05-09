@@ -45,16 +45,24 @@ resource "aws_secretsmanager_secret_version" "grafana_oauth" {
   })
 }
 
-resource "aws_secretsmanager_secret" "resend" {
-  name                    = "detailsnap/resend"
-  recovery_window_in_days = 0
-}
-
-resource "aws_secretsmanager_secret_version" "resend" {
-  secret_id = aws_secretsmanager_secret.resend.id
-  secret_string = jsonencode({
+resource "null_resource" "resend_secret" {
+  triggers = {
     api_key = var.resend_api_key
-  })
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws secretsmanager describe-secret --secret-id detailsnap/resend --region us-east-1 2>/dev/null \
+        || aws secretsmanager create-secret --name detailsnap/resend --region us-east-1
+      aws secretsmanager put-secret-value \
+        --secret-id detailsnap/resend \
+        --secret-string "{\"api_key\":\"$RESEND_API_KEY\"}" \
+        --region us-east-1
+    EOT
+    environment = {
+      RESEND_API_KEY = var.resend_api_key
+    }
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "jwt" {
