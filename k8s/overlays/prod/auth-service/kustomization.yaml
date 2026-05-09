@@ -7,7 +7,7 @@ resources:
 images:
   - name: detailsnap/auth-service
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/auth-service
-    newTag: v1.0.0
+    newTag: v1.0.1
 patches:
   - patch: |-
       - op: replace
