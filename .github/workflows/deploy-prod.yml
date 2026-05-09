@@ -26,19 +26,36 @@ jobs:
               id: login-ecr
               uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
 
-            - name: Tag latest as ${{ github.event.client_payload.tag }}
+            - name: Tag latest RC of ${{ github.event.client_payload.tag }} as release
               env:
                   RELEASE_TAG: ${{ github.event.client_payload.tag }}
               run: |
                   for SERVICE in $SERVICES; do
+                    # Find the highest RC tag matching this release version (e.g. v1.0.1-rc.3)
+                    RC_TAG=$(aws ecr list-images \
+                      --repository-name detailsnap/$SERVICE \
+                      --query 'imageIds[].imageTag' \
+                      --output text \
+                      | tr '\t' '\n' \
+                      | grep -E "^${RELEASE_TAG}-rc\.[0-9]+$" \
+                      | sort -t. -k4 -n \
+                      | tail -1)
+
+                    if [ -z "$RC_TAG" ]; then
+                      echo "WARNING: no RC tag found for ${RELEASE_TAG} in $SERVICE, skipping"
+                      continue
+                    fi
+
+                    echo "Using source tag: $RC_TAG"
+
                     MANIFEST=$(aws ecr batch-get-image \
                       --repository-name detailsnap/$SERVICE \
-                      --image-ids imageTag=latest \
+                      --image-ids imageTag="$RC_TAG" \
                       --query 'images[0].imageManifest' \
                       --output text 2>/dev/null || echo "")
 
                     if [ -z "$MANIFEST" ]; then
-                      echo "WARNING: no latest image for $SERVICE, skipping"
+                      echo "WARNING: could not fetch manifest for $RC_TAG in $SERVICE, skipping"
                       continue
                     fi
 
