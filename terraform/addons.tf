@@ -172,7 +172,7 @@ resource "helm_release" "external_secrets" {
     value = "system"
   }
 
-  depends_on = [null_resource.wait_for_system_node]
+  depends_on = [helm_release.aws_lbc, null_resource.wait_for_system_node]
 }
 
 resource "helm_release" "external_dns" {
@@ -219,5 +219,5 @@ resource "helm_release" "external_dns" {
     value = "system"
   }
 
-  depends_on = [null_resource.gateway_api_crds, null_resource.wait_for_system_node]
+  depends_on = [helm_release.aws_lbc, null_resource.gateway_api_crds, null_resource.wait_for_system_node]
 }
