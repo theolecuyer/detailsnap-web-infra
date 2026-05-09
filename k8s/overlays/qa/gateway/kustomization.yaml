@@ -14,4 +14,3 @@ patches:
         value: qa.tlecuyer.codes
     target:
       kind: HTTPRoute
-      name: main

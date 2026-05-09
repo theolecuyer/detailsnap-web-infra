@@ -5,6 +5,7 @@ metadata:
 spec:
   parentRefs:
     - name: main
+      sectionName: https
   hostnames:
     - HOSTNAME
   rules:

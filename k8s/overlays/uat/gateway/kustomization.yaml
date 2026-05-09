@@ -14,4 +14,3 @@ patches:
         value: uat.tlecuyer.codes
     target:
       kind: HTTPRoute
-      name: main
