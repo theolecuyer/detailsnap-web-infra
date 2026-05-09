@@ -8,7 +8,7 @@ resources:
 images:
   - name: detailsnap/core-service
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/core-service
-    newTag: latest
+    newTag: uat-v1.0.0-rc.1
 patches:
   - patch: |-
       - op: add
