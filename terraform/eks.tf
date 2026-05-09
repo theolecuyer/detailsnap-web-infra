@@ -41,7 +41,7 @@ resource "aws_eks_node_group" "envs" {
   for_each = {
     qa   = { desired = 1, min = 1, max = 2 }
     uat  = { desired = 2, min = 2, max = 3 }
-    prod = { desired = 2, min = 2, max = 3 }
+    prod = { desired = 3, min = 3, max = 4 }
   }
 
   cluster_name    = aws_eks_cluster.main.name
