@@ -94,3 +94,56 @@ output "ecr_registry" {
   value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.us-east-1.amazonaws.com"
   description = "ECR registry URL"
 }
+
+data "aws_route53_zone" "main" {
+  name         = "tlecuyer.codes"
+  private_zone = false
+}
+
+resource "aws_route53_record" "resend_dkim" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name    = "resend._domainkey.system"
+  type    = "TXT"
+  ttl     = 300
+  records = ["p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDYt6bJ0o45vf8BRJ1o4oyOD1UYxrWUpq0vWobBxDfTFGl3cf1A6DiaO4HqVhaOo/Ww9pQqzx75dnBUGmW17LsY57N/y3QDANtAUOw5LsIa1dkCnlfJD2mBM06NisxZviJftdxso6vn/G1Gel3FzuNs+WvwI6z0gMPjRrI+qe1b/QIDAQAB"]
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_route53_record" "resend_spf_mx" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name    = "send.system"
+  type    = "MX"
+  ttl     = 300
+  records = ["10 feedback-smtp.us-east-1.amazonses.com"]
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_route53_record" "resend_spf_txt" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name    = "send.system"
+  type    = "TXT"
+  ttl     = 300
+  records = ["v=spf1 include:amazonses.com ~all"]
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_route53_record" "dmarc" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name    = "_dmarc"
+  type    = "TXT"
+  ttl     = 300
+  records = ["v=DMARC1; p=none;"]
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}

@@ -1,0 +1,72 @@
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: detailsnap
+      MYSQL_USER: detailsnap
+      MYSQL_PASSWORD: changeme
+    volumes:
+      - /tmp/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-udetailsnap", "-pchangeme"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  auth-service:
+    image: {ecr_registry}/detailsnap/auth-service:{image_tag}
+    environment:
+      PORT: "8081"
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_USER: detailsnap
+      DB_PASSWORD: changeme
+      DB_NAME: detailsnap
+      JWT_SECRET: smoke-test-jwt-secret-only
+      JWT_TTL_HOURS: "24"
+      CORS_ORIGIN: http://localhost
+      LOG_LEVEL: info
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  core-service:
+    image: {ecr_registry}/detailsnap/core-service:{image_tag}
+    environment:
+      PORT: "8082"
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_USER: detailsnap
+      DB_PASSWORD: changeme
+      DB_NAME: detailsnap
+      JWT_SECRET: smoke-test-jwt-secret-only
+      CORS_ORIGIN: http://localhost
+      LOG_LEVEL: info
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  media-service:
+    image: {ecr_registry}/detailsnap/media-service:{image_tag}
+    environment:
+      PORT: "8083"
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_USER: detailsnap
+      DB_PASSWORD: changeme
+      DB_NAME: detailsnap
+      JWT_SECRET: smoke-test-jwt-secret-only
+      CORS_ORIGIN: http://localhost
+      AWS_REGION: us-east-1
+      S3_BUCKET: {media_bucket}
+      PRESIGNED_URL_TTL_SECONDS: "3600"
+    ports:
+      - "8083:8083"
+    depends_on:
+      mysql:
+        condition: service_healthy
