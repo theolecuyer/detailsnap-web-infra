@@ -71,6 +71,10 @@ resource "aws_eks_node_group" "envs" {
   labels = {
     env = each.key
   }
+
+  tags = {
+    Name = each.key
+  }
 }
 
 resource "aws_eks_node_group" "system" {
@@ -100,5 +104,9 @@ resource "aws_eks_node_group" "system" {
 
   labels = {
     node-type = "system"
+  }
+
+  tags = {
+    Name = "system"
   }
 }

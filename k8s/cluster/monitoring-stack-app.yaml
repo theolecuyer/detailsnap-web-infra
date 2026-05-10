@@ -38,7 +38,7 @@ spec:
               host: smtp.resend.com:587
               user: resend
               password: $__env{GF_SMTP_PASSWORD}
-              from_address: alerts@tlecuyer.codes
+              from_address: alerts@system.tlecuyer.codes
               from_name: Grafana Alerts
               startTLS_policy: MandatoryStartTLS
           additionalDataSources:
@@ -80,7 +80,7 @@ spec:
               - grafana-credentials
           config:
             global:
-              smtp_from: alerts@tlecuyer.codes
+              smtp_from: alerts@system.tlecuyer.codes
               smtp_smarthost: smtp.resend.com:587
               smtp_auth_username: resend
               smtp_auth_password_file: /etc/alertmanager/secrets/grafana-credentials/GF_SMTP_PASSWORD
