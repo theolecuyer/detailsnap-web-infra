@@ -108,6 +108,15 @@ spec:
             serviceMonitorSelectorNilUsesHelmValues: false
             podMonitorSelectorNilUsesHelmValues: false
 
+        kubeScheduler:
+          enabled: false
+
+        kubeControllerManager:
+          enabled: false
+
+        kubeEtcd:
+          enabled: false
+
         nodeExporter:
           enabled: true
 
