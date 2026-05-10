@@ -239,6 +239,20 @@ resource "helm_release" "external_dns" {
     value = "system"
   }
 
+  values = [
+    yamlencode({
+      clusterRole = {
+        extraRules = [
+          {
+            apiGroups = ["gateway.networking.k8s.io"]
+            resources = ["gateways", "httproutes"]
+            verbs     = ["get", "list", "watch"]
+          }
+        ]
+      }
+    })
+  ]
+
   depends_on = [helm_release.aws_lbc, null_resource.gateway_api_crds, null_resource.wait_for_system_node]
 }
 
