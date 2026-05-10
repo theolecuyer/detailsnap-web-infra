@@ -71,3 +71,15 @@ resource "aws_secretsmanager_secret_version" "jwt" {
     secret = random_password.jwt_secret.result
   })
 }
+
+resource "aws_secretsmanager_secret" "mysql_exporter" {
+  name                    = "detailsnap/mysql-exporter"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "mysql_exporter" {
+  secret_id = aws_secretsmanager_secret.mysql_exporter.id
+  secret_string = jsonencode({
+    dsn = "admin:${random_password.db_master.result}@tcp(${aws_db_instance.main.address}:3306)/"
+  })
+}

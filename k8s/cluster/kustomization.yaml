@@ -6,3 +6,5 @@ resources:
   - ecr-token-refresh.yaml
   - monitoring-infra-app.yaml
   - monitoring-stack-app.yaml
+  - loki-app.yaml
+  - alloy-app.yaml

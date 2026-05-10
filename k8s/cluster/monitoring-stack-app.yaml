@@ -32,6 +32,7 @@ spec:
               api_url: https://api.github.com/user
               client_id: $__env{GF_AUTH_GITHUB_CLIENT_ID}
               client_secret: $__env{GF_AUTH_GITHUB_CLIENT_SECRET}
+              allowed_users: theolecuyer
             smtp:
               enabled: true
               host: smtp.resend.com:587
@@ -40,6 +41,34 @@ spec:
               from_address: alerts@tlecuyer.codes
               from_name: Grafana Alerts
               startTLS_policy: MandatoryStartTLS
+          additionalDataSources:
+            - name: Loki
+              type: loki
+              url: http://loki.monitoring.svc.cluster.local:3100
+              access: proxy
+              isDefault: false
+              jsonData:
+                maxLines: 1000
+
+          dashboardProviders:
+            dashboardproviders.yaml:
+              apiVersion: 1
+              providers:
+                - name: custom
+                  orgId: 1
+                  folder: Custom
+                  type: file
+                  disableDeletion: false
+                  options:
+                    path: /var/lib/grafana/dashboards/custom
+
+          dashboards:
+            custom:
+              mysql:
+                gnetId: 7362
+                revision: 7
+                datasource: Prometheus
+
           service:
             type: ClusterIP
 

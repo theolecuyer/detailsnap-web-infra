@@ -1,0 +1,122 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: alloy
+    targetRevision: "0.12.0"
+    helm:
+      releaseName: alloy
+      values: |
+        controller:
+          type: daemonset
+
+        alloy:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          configMap:
+            content: |-
+              // Only discover pods scheduled on this node
+              discovery.kubernetes "pods" {
+                role = "pod"
+                selectors {
+                  role  = "pod"
+                  field = "spec.nodeName=" + coalesce(sys.env("HOSTNAME"), constants.hostname)
+                }
+              }
+
+              // Relabel pod metadata into Loki labels and resolve log file path
+              discovery.relabel "pods" {
+                targets = discovery.kubernetes.pods.targets
+
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_phase"]
+                  regex         = "Pending|Succeeded|Failed|Unknown"
+                  action        = "drop"
+                }
+
+                rule {
+                  source_labels = ["__meta_kubernetes_namespace"]
+                  action        = "replace"
+                  target_label  = "namespace"
+                }
+
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_name"]
+                  action        = "replace"
+                  target_label  = "pod"
+                }
+
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_container_name"]
+                  action        = "replace"
+                  target_label  = "container"
+                }
+
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_label_app"]
+                  action        = "replace"
+                  target_label  = "app"
+                }
+
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+                  separator     = "/"
+                  action        = "replace"
+                  target_label  = "__path__"
+                  replacement   = "/var/log/pods/*$1/*.log"
+                }
+              }
+
+              // Stream pod logs
+              loki.source.kubernetes "pods" {
+                targets    = discovery.relabel.pods.output
+                forward_to = [loki.process.pipeline.receiver]
+              }
+
+              // Extract level/severity from JSON logs in app namespaces
+              loki.process "pipeline" {
+                stage.match {
+                  selector = `{namespace=~"qa|uat|prod"}`
+
+                  stage.json {
+                    expressions = {
+                      level    = "level",
+                      severity = "severity",
+                    }
+                  }
+
+                  stage.labels {
+                    values = {
+                      level    = "",
+                      severity = "",
+                    }
+                  }
+                }
+
+                forward_to = [loki.write.loki.receiver]
+              }
+
+              // Send to Loki
+              loki.write "loki" {
+                endpoint {
+                  url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+                }
+              }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

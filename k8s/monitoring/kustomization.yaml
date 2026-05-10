@@ -5,3 +5,5 @@ resources:
   - external-secret.yaml
   - gateway.yaml
   - httproute.yaml
+  - mysql-exporter-secret.yaml
+  - mysql-exporter.yaml
