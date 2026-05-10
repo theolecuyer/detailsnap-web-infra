@@ -21,6 +21,11 @@ spec:
         - .spec.data[].remoteRef.metadataPolicy
         - .spec.data[].remoteRef.nullBytePolicy
     - group: gateway.networking.k8s.io
+      kind: Gateway
+      jqPathExpressions:
+        - .spec.listeners[].tls.certificateRefs[].group
+        - .spec.listeners[].allowedRoutes.namespaces.from
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       jqPathExpressions:
         - .spec.parentRefs[].group
