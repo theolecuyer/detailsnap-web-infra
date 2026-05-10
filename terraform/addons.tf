@@ -220,6 +220,11 @@ resource "helm_release" "external_dns" {
   }
 
   set {
+    name  = "sources[2]"
+    value = "gateway-gateway"
+  }
+
+  set {
     name  = "txtOwnerId"
     value = "detailsnap"
   }
