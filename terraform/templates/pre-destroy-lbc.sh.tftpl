@@ -25,9 +25,12 @@ for tg in $(aws elbv2 describe-target-groups --region us-east-1 \
   aws elbv2 delete-target-group --target-group-arn "$tg" --region us-east-1 || true
 done
 
-# Detach k8s SGs from node ENIs — LBC attaches the backend SG directly to node
-# network interfaces; as long as nodes are running those ENIs hold a reference
-# that prevents SG deletion.
+# Get the default SG to use as fallback when detaching k8s SGs from ENIs
+# (AWS requires at least 1 SG per ENI, so we can't set an empty list)
+default_sg=$(aws ec2 describe-security-groups --region us-east-1 \
+  --filters "Name=vpc-id,Values=${vpc_id}" "Name=group-name,Values=default" \
+  --query 'SecurityGroups[0].GroupId' --output text)
+
 echo "Detaching k8s SGs from node ENIs..."
 for sg in $(aws ec2 describe-security-groups --region us-east-1 \
   --filters "Name=vpc-id,Values=${vpc_id}" \
@@ -37,37 +40,43 @@ for sg in $(aws ec2 describe-security-groups --region us-east-1 \
     --query 'NetworkInterfaces[*].NetworkInterfaceId' --output text); do
     new_sgs=$(aws ec2 describe-network-interfaces --network-interface-ids "$eni" --region us-east-1 \
       --query "NetworkInterfaces[0].Groups[?GroupId!='$sg'].GroupId" --output text)
-    if [ -n "$new_sgs" ]; then
-      aws ec2 modify-network-interface-attribute --network-interface-id "$eni" \
-        --groups $new_sgs --region us-east-1 2>/dev/null || true
-    fi
+    # Fall back to default SG if this was the only SG on the ENI
+    aws ec2 modify-network-interface-attribute --network-interface-id "$eni" \
+      --groups ${new_sgs:-$default_sg} --region us-east-1 2>/dev/null || true
   done
 done
 
-# Revoke all rules from k8s-managed SGs first to break circular references
+# Revoke all rules from every non-default SG in the VPC to break circular references.
+# Targets k8s-* and eks-cluster-sg-* (EKS auto-created, not in Terraform state).
+echo "Revoking rules from non-default security groups..."
 for sg in $(aws ec2 describe-security-groups --region us-east-1 \
   --filters "Name=vpc-id,Values=${vpc_id}" \
-  --query 'SecurityGroups[?starts_with(GroupName, `k8s-`)].GroupId' --output text); do
+  --query 'SecurityGroups[?GroupName!=`default`].GroupId' --output text); do
   ingress=$(aws ec2 describe-security-groups --group-ids "$sg" --region us-east-1 \
-    --query 'SecurityGroups[0].IpPermissions' --output json)
+    --query 'SecurityGroups[0].IpPermissions' --output json 2>/dev/null || echo "[]")
   egress=$(aws ec2 describe-security-groups --group-ids "$sg" --region us-east-1 \
-    --query 'SecurityGroups[0].IpPermissionsEgress' --output json)
-  [ "$ingress" != "[]" ] && aws ec2 revoke-security-group-ingress --group-id "$sg" \
-    --ip-permissions "$ingress" --region us-east-1 2>/dev/null || true
-  [ "$egress" != "[]" ] && aws ec2 revoke-security-group-egress --group-id "$sg" \
-    --ip-permissions "$egress" --region us-east-1 2>/dev/null || true
+    --query 'SecurityGroups[0].IpPermissionsEgress' --output json 2>/dev/null || echo "[]")
+  if [ "$ingress" != "[]" ] && [ "$ingress" != "null" ] && [ -n "$ingress" ]; then
+    aws ec2 revoke-security-group-ingress --group-id "$sg" \
+      --ip-permissions "$ingress" --region us-east-1 2>/dev/null || true
+  fi
+  if [ "$egress" != "[]" ] && [ "$egress" != "null" ] && [ -n "$egress" ]; then
+    aws ec2 revoke-security-group-egress --group-id "$sg" \
+      --ip-permissions "$egress" --region us-east-1 2>/dev/null || true
+  fi
 done
 
-# Retry SG deletion — may need a few attempts as ENIs finish releasing
-echo "Deleting k8s-managed security groups..."
-for attempt in $(seq 1 6); do
+# Delete all non-default SGs with retries — covers k8s-* and eks-cluster-sg-*
+# that exist outside Terraform state and would otherwise block VPC deletion.
+echo "Deleting non-default security groups..."
+for attempt in $(seq 1 12); do
   remaining=0
   for sg in $(aws ec2 describe-security-groups --region us-east-1 \
     --filters "Name=vpc-id,Values=${vpc_id}" \
-    --query 'SecurityGroups[?starts_with(GroupName, `k8s-`)].GroupId' --output text); do
+    --query 'SecurityGroups[?GroupName!=`default`].GroupId' --output text); do
     aws ec2 delete-security-group --group-id "$sg" --region us-east-1 2>/dev/null || remaining=$((remaining+1))
   done
   [ "$remaining" = "0" ] && break
-  echo "  $remaining SG(s) still in use, waiting 10s..."
-  sleep 10
+  echo "  $remaining SG(s) still in use, waiting 15s..."
+  sleep 15
 done
