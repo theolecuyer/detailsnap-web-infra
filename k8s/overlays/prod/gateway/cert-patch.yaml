@@ -3,4 +3,4 @@
   value: arn:aws:acm:us-east-1:651084712750:certificate/b0626404-f05f-4d18-b295-6c4a47502fb0
 - op: replace
   path: /metadata/annotations/external-dns.alpha.kubernetes.io~1hostname
-  value: prod.tlecuyer.codes
+  value: tlecuyer.codes
