@@ -51,6 +51,8 @@ spec:
               memory: 256Mi
             limits:
               memory: 512Mi
+          persistence:
+            enabled: false
 
         read:
           replicas: 0
