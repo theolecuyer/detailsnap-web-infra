@@ -175,6 +175,26 @@ resource "helm_release" "external_secrets" {
   depends_on = [helm_release.aws_lbc, null_resource.wait_for_system_node]
 }
 
+resource "null_resource" "patch_external_secret_finalizers" {
+  depends_on = [helm_release.external_secrets]
+
+  triggers = {
+    cluster = aws_eks_cluster.main.name
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOF
+      aws eks update-kubeconfig --name ${self.triggers.cluster} --region us-east-1 || true
+      for ns in $(kubectl get externalsecret -A --no-headers -o custom-columns=NS:.metadata.namespace 2>/dev/null | sort -u); do
+        for es in $(kubectl get externalsecret -n $ns -o name 2>/dev/null); do
+          kubectl patch $es -n $ns --type=json -p '[{"op":"remove","path":"/metadata/finalizers"}]' 2>/dev/null || true
+        done
+      done
+    EOF
+  }
+}
+
 resource "helm_release" "external_dns" {
   name             = "external-dns"
   repository       = "https://kubernetes-sigs.github.io/external-dns/"
