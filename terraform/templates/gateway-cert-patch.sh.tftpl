@@ -30,7 +30,7 @@ cat > k8s/overlays/prod/gateway/cert-patch.yaml << CERT_PATCH
   value: ${cert_arn}
 - op: replace
   path: /metadata/annotations/external-dns.alpha.kubernetes.io~1hostname
-  value: prod.tlecuyer.codes
+  value: tlecuyer.codes
 CERT_PATCH
 
 git add k8s/overlays/qa/gateway/cert-patch.yaml \
