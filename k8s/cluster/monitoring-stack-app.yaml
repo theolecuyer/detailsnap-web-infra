@@ -33,7 +33,8 @@ spec:
               client_id: $__env{GF_AUTH_GITHUB_CLIENT_ID}
               client_secret: $__env{GF_AUTH_GITHUB_CLIENT_SECRET}
               allowed_users: theolecuyer
-              role_attribute_path: "Admin"
+            users:
+              auto_assign_org_role: Admin
             smtp:
               enabled: true
               host: smtp.resend.com:587
