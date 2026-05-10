@@ -59,7 +59,7 @@ spec:
           kind: Gateway
           jqPathExpressions:
             - .spec.listeners[].allowedRoutes.namespaces.from
-            - .spec.listeners[].tls.certificateRefs[].group
+            - .spec.listeners[].tls?.certificateRefs[]?.group
         - group: gateway.networking.k8s.io
           kind: HTTPRoute
           jqPathExpressions:
