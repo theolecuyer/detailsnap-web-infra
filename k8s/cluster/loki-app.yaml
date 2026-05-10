@@ -56,6 +56,12 @@ spec:
         backend:
           replicas: 0
 
+        chunksCache:
+          enabled: false
+
+        resultsCache:
+          enabled: false
+
         gateway:
           enabled: false
 
@@ -72,3 +78,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
