@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: mysqld-exporter
-          image: prom/mysqld-exporter:v0.15.1
+          image: prom/mysqld-exporter:v0.14.0
           args:
             - --collect.global_status
             - --collect.global_variables
