@@ -8,7 +8,7 @@ images:
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/core-service
     newTag: qa-nightly-25598782717
   - name: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/core-service
-    newTag: sha-2a4fa3b
+    newTag: sha-f75f3a0
 patches:
   - patch: |-
       - op: add
