@@ -36,7 +36,7 @@ resource "null_resource" "pre_destroy_lbc" {
   }
 
   provisioner "local-exec" {
-    when    = destroy
+    when = destroy
     command = templatefile("${path.module}/templates/pre-destroy-lbc.sh.tftpl", {
       cluster_name = self.triggers.cluster_name
       vpc_id       = self.triggers.vpc_id
@@ -149,7 +149,7 @@ resource "null_resource" "pre_destroy_eso" {
   }
 
   provisioner "local-exec" {
-    when    = destroy
+    when = destroy
     command = templatefile("${path.module}/templates/pre-destroy-eso.sh.tftpl", {
       cluster_name = self.triggers.cluster_name
     })
@@ -193,6 +193,44 @@ resource "null_resource" "patch_external_secret_finalizers" {
       done
     EOF
   }
+}
+
+resource "null_resource" "cleanup_apex_dns" {
+  triggers = {
+    cluster_id = aws_eks_cluster.main.id
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name "tlecuyer.codes." \
+        --query "HostedZones[0].Id" --output text | cut -d/ -f3)
+
+      EXISTING=$(aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" \
+        --query "ResourceRecordSets[?Name=='tlecuyer.codes.' && Type=='A']" \
+        --output json)
+
+      if echo "$EXISTING" | jq -e '.[0]' > /dev/null 2>&1; then
+        aws route53 change-resource-record-sets \
+          --hosted-zone-id "$ZONE_ID" \
+          --change-batch "$(echo "$EXISTING" | jq -c '{Changes:[{Action:"DELETE",ResourceRecordSet:.[0]}]}')" \
+          2>/dev/null || true
+      fi
+
+      TXT=$(aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" \
+        --query "ResourceRecordSets[?Name=='tlecuyer.codes.' && Type=='TXT']" \
+        --output json)
+
+      EDNS_TXT=$(echo "$TXT" | jq '[.[] | select(any(.ResourceRecords[]; .Value | contains("heritage=external-dns")))]')
+      if echo "$EDNS_TXT" | jq -e '.[0]' > /dev/null 2>&1; then
+        aws route53 change-resource-record-sets \
+          --hosted-zone-id "$ZONE_ID" \
+          --change-batch "$(echo "$EDNS_TXT" | jq -c '{Changes:[.[] | {Action:"DELETE",ResourceRecordSet:.}]}')" \
+          2>/dev/null || true
+      fi
+    EOT
+  }
+
+  depends_on = [aws_eks_node_group.envs]
 }
 
 resource "helm_release" "external_dns" {
@@ -248,7 +286,7 @@ resource "helm_release" "external_dns" {
   YAML
   ]
 
-  depends_on = [helm_release.aws_lbc, null_resource.gateway_api_crds, null_resource.wait_for_system_node]
+  depends_on = [helm_release.aws_lbc, null_resource.gateway_api_crds, null_resource.wait_for_system_node, null_resource.cleanup_apex_dns]
 }
 
 resource "helm_release" "argocd_image_updater" {
