@@ -9,7 +9,7 @@ images:
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/frontend
     newTag: v1.0.1-rc.1
   - name: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/frontend
-    newTag: v1.1.0-rc.2
+    newTag: v1.1.0-rc.3
 patches:
   - patch: |-
       - op: add
