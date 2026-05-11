@@ -8,6 +8,10 @@ on:
     repository_dispatch:
         types: [qa-build]
 
+concurrency:
+    group: nightly-qa
+    cancel-in-progress: true
+
 env:
     AWS_REGION: us-east-1
     SOURCE_REPO: theolecuyer/detailsnap-web

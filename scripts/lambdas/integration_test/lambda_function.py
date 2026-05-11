@@ -16,7 +16,8 @@ def lambda_handler(event, context):
 
     instance_profile_arn = os.environ['INSTANCE_PROFILE_ARN']
     ssm_prefix = os.environ['SSM_PREFIX']
-    param_name = f"{ssm_prefix}/{image_tag}"
+    invocation_id = context.aws_request_id.replace('-', '')[:12]
+    param_name = f"{ssm_prefix}/{image_tag}-{invocation_id}"
 
     try:
         ssm_client.delete_parameter(Name=param_name)
