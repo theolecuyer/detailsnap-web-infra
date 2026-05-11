@@ -205,16 +205,17 @@ resource "null_resource" "cleanup_apex_dns" {
       ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name "tlecuyer.codes." \
         --query "HostedZones[0].Id" --output text | cut -d/ -f3)
 
-      EXISTING=$(aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" \
-        --query "ResourceRecordSets[?Name=='tlecuyer.codes.' && Type=='A']" \
-        --output json)
-
-      if echo "$EXISTING" | jq -e '.[0]' > /dev/null 2>&1; then
-        aws route53 change-resource-record-sets \
-          --hosted-zone-id "$ZONE_ID" \
-          --change-batch "$(echo "$EXISTING" | jq -c '{Changes:[{Action:"DELETE",ResourceRecordSet:.[0]}]}')" \
-          2>/dev/null || true
-      fi
+      for TYPE in A AAAA; do
+        EXISTING=$(aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" \
+          --query "ResourceRecordSets[?Name=='tlecuyer.codes.' && Type=='$TYPE']" \
+          --output json)
+        if echo "$EXISTING" | jq -e '.[0]' > /dev/null 2>&1; then
+          aws route53 change-resource-record-sets \
+            --hosted-zone-id "$ZONE_ID" \
+            --change-batch "$(echo "$EXISTING" | jq -c '{Changes:[{Action:"DELETE",ResourceRecordSet:.[0]}]}')" \
+            2>/dev/null || true
+        fi
+      done
 
       TXT=$(aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" \
         --query "ResourceRecordSets[?Name=='tlecuyer.codes.' && Type=='TXT']" \
