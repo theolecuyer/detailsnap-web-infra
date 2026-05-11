@@ -6,10 +6,6 @@ data "aws_iam_role" "lab" {
   name = "LabRole"
 }
 
-data "aws_ssm_parameter" "eks_ami_release_version" {
-  name = "/aws/service/eks/optimized-ami/${local.cluster_version}/amazon-linux-2023/x86_64/standard/recommended/release_version"
-}
-
 resource "aws_eks_cluster" "main" {
   name     = "detailsnap"
   role_arn = data.aws_iam_role.lab.arn
@@ -51,7 +47,7 @@ resource "aws_eks_node_group" "envs" {
 
   ami_type        = "AL2023_x86_64_STANDARD"
   instance_types  = [each.value.instance_type]
-  release_version = data.aws_ssm_parameter.eks_ami_release_version.value
+  release_version = "1.32.12-20260421"
 
   launch_template {
     id      = aws_launch_template.node.id
@@ -85,7 +81,7 @@ resource "aws_eks_node_group" "system" {
 
   ami_type        = "AL2023_x86_64_STANDARD"
   instance_types  = ["t3.medium"]
-  release_version = data.aws_ssm_parameter.eks_ami_release_version.value
+  release_version = "1.32.12-20260421"
 
   launch_template {
     id      = aws_launch_template.node.id
