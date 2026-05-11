@@ -389,3 +389,31 @@ resource "helm_release" "argo_rollouts" {
 
   depends_on = [null_resource.wait_for_system_node]
 }
+
+resource "null_resource" "argo_rollouts_gateway_plugin" {
+  triggers = {
+    rollouts_version = helm_release.argo_rollouts.version
+    plugin_version   = "v0.13.0"
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1
+      kubectl apply -f - <<'MANIFEST'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argo-rollouts-config
+  namespace: argo-rollouts
+data:
+  trafficRouterPlugins: |-
+    - name: "argoproj-labs/gatewayAPI"
+      location: "https://github.com/argoproj-labs/rollouts-plugin-trafficrouter-gatewayapi/releases/download/v0.13.0/gatewayapi-plugin-linux-amd64"
+MANIFEST
+      kubectl rollout restart deployment/argo-rollouts -n argo-rollouts
+      kubectl rollout status deployment/argo-rollouts -n argo-rollouts --timeout=120s
+    EOT
+  }
+
+  depends_on = [helm_release.argo_rollouts]
+}
