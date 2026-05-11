@@ -8,6 +8,8 @@ images:
   - name: detailsnap/media-service
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/media-service
     newTag: v1.0.1-rc.1
+  - name: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/media-service
+    newTag: v1.1.0-rc.2
 patches:
   - patch: |-
       - op: add
