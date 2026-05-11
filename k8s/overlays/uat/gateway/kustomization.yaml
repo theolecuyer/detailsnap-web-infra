@@ -12,5 +12,41 @@ patches:
       - op: replace
         path: /spec/hostnames/0
         value: uat.tlecuyer.codes
+      - op: replace
+        path: /spec/rules/0/backendRefs
+        value:
+          - name: auth-service
+            port: 8081
+            weight: 100
+          - name: auth-service-canary
+            port: 8081
+            weight: 0
+      - op: replace
+        path: /spec/rules/1/backendRefs
+        value:
+          - name: core-service
+            port: 8082
+            weight: 100
+          - name: core-service-canary
+            port: 8082
+            weight: 0
+      - op: replace
+        path: /spec/rules/2/backendRefs
+        value:
+          - name: media-service
+            port: 8083
+            weight: 100
+          - name: media-service-canary
+            port: 8083
+            weight: 0
+      - op: replace
+        path: /spec/rules/3/backendRefs
+        value:
+          - name: frontend
+            port: 80
+            weight: 100
+          - name: frontend-canary
+            port: 80
+            weight: 0
     target:
       kind: HTTPRoute

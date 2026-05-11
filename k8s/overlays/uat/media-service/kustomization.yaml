@@ -35,6 +35,11 @@ patches:
           canary:
             canaryService: media-service-canary
             stableService: media-service
+            trafficRouting:
+              plugins:
+                argoproj-labs/gatewayAPI:
+                  httpRoute: main
+                  namespace: uat
             steps:
               - setWeight: 25
               - pause: {duration: 2m}

@@ -8,3 +8,4 @@ resources:
   - monitoring-stack-app.yaml
   - loki-app.yaml
   - alloy-app.yaml
+  - argo-rollouts-gateway-plugin.yaml
