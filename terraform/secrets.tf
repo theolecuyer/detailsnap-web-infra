@@ -80,6 +80,6 @@ resource "aws_secretsmanager_secret" "mysql_exporter" {
 resource "aws_secretsmanager_secret_version" "mysql_exporter" {
   secret_id = aws_secretsmanager_secret.mysql_exporter.id
   secret_string = jsonencode({
-    dsn = "admin:${urlencode(random_password.db_master.result)}@tcp(${aws_db_instance.main.address}:3306)/"
+    mycnf = "[client]\nuser = ${aws_db_instance.main.username}\npassword = ${random_password.db_master.result}\nhost = ${aws_db_instance.main.address}\nport = 3306\n"
   })
 }
