@@ -12,6 +12,9 @@ patches:
       - op: replace
         path: /spec/hostnames/0
         value: uat.tlecuyer.codes
+    target:
+      kind: HTTPRoute
+  - patch: |-
       - op: replace
         path: /spec/rules/0/backendRefs
         value:
@@ -50,3 +53,4 @@ patches:
             weight: 0
     target:
       kind: HTTPRoute
+      name: main
