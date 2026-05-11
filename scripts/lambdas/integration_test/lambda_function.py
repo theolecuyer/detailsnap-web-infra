@@ -50,6 +50,14 @@ def lambda_handler(event, context):
     subnets = [s for s in subnet_resp['Subnets'] if s['AvailabilityZone'] != 'us-east-1e']
     subnet_id = subnets[0]['SubnetId']
 
+    sg_resp = ec2.describe_security_groups(
+        Filters=[
+            {'Name': 'group-name', 'Values': ['default']},
+            {'Name': 'vpc-id', 'Values': [default_vpc_id]},
+        ]
+    )
+    default_sg_id = sg_resp['SecurityGroups'][0]['GroupId']
+
     auth_flag = f'-H "Authorization: token {github_token}"' if github_token else ''
 
     user_data = f"""#!/bin/bash
@@ -109,7 +117,12 @@ aws ec2 terminate-instances --region us-east-1 --instance-ids "$INSTANCE_ID"
         InstanceType='t3.small',
         MinCount=1,
         MaxCount=1,
-        SubnetId=subnet_id,
+        NetworkInterfaces=[{
+            'AssociatePublicIpAddress': True,
+            'DeviceIndex': 0,
+            'SubnetId': subnet_id,
+            'Groups': [default_sg_id],
+        }],
         IamInstanceProfile={'Arn': instance_profile_arn},
         UserData=user_data,
         InstanceInitiatedShutdownBehavior='terminate',
