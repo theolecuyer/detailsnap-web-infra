@@ -36,12 +36,6 @@ resource "aws_launch_template" "node" {
     http_put_response_hop_limit = 2
   }
 
-  tag_specifications {
-    resource_type = "instance"
-    tags = {
-      patch_cycle = "2026-05"
-    }
-  }
 }
 
 resource "aws_eks_node_group" "envs" {
