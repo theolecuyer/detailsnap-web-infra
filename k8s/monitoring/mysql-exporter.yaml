@@ -17,27 +17,30 @@ spec:
         - name: mysqld-exporter
           image: prom/mysqld-exporter:v0.14.0
           args:
+            - --config.my-cnf=/etc/mysql/mycnf
             - --collect.global_status
             - --collect.global_variables
             - --collect.info_schema.innodb_metrics
             - --collect.info_schema.tables
             - --collect.info_schema.processlist
             - --collect.perf_schema.tableiowaits
-          env:
-            - name: DATA_SOURCE_NAME
-              valueFrom:
-                secretKeyRef:
-                  name: mysql-exporter-credentials
-                  key: DATA_SOURCE_NAME
           ports:
             - containerPort: 9104
               name: metrics
+          volumeMounts:
+            - name: mysql-config
+              mountPath: /etc/mysql
+              readOnly: true
           resources:
             requests:
               cpu: 50m
               memory: 64Mi
             limits:
               memory: 128Mi
+      volumes:
+        - name: mysql-config
+          secret:
+            secretName: mysql-exporter-credentials
 ---
 apiVersion: v1
 kind: Service
