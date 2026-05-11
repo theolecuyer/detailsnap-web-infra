@@ -1,6 +1,6 @@
 - op: replace
   path: /metadata/annotations/alb.ingress.kubernetes.io~1certificate-arn
-  value: arn:aws:acm:us-east-1:651084712750:certificate/65068058-a69c-4269-acf3-b2498ff23741
+  value: arn:aws:acm:us-east-1:651084712750:certificate/041c345d-959a-4e4f-92ce-beef2752828d
 - op: replace
   path: /metadata/annotations/external-dns.alpha.kubernetes.io~1hostname
   value: tlecuyer.codes
