@@ -114,7 +114,7 @@ jobs:
                   MEDIA_BUCKET="detailsnap-media-$ACCOUNT_ID"
 
                   PAYLOAD=$(jq -n \
-                    --arg tag "sha-$APP_SHA" \
+                    --arg tag "build-$APP_SHA" \
                     --arg registry "$REGISTRY" \
                     --arg bucket "$MEDIA_BUCKET" \
                     --arg token "${{ secrets.GH_TOKEN }}" \
