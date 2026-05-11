@@ -71,8 +71,8 @@ spec:
                 revision: 1
                 datasource: Prometheus
               node-overview:
-                gnetId: 11074
-                revision: 9
+                gnetId: 1860
+                revision: 37
                 datasource: Prometheus
 
           service:
