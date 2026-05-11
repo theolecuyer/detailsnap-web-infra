@@ -2,8 +2,6 @@ name: QA Build and Promote
 
 # Triggered by semantic-release.yml in the app repo after every PR merge.
 on:
-    schedule:
-        - cron: "0 8 * * *"
     workflow_dispatch:
     repository_dispatch:
         types: [qa-build]
