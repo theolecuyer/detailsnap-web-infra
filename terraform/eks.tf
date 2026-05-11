@@ -41,7 +41,7 @@ resource "aws_eks_node_group" "envs" {
   for_each = {
     qa   = { desired = 1, min = 1, max = 2, instance_type = "t3.small" }
     uat  = { desired = 2, min = 2, max = 3, instance_type = "t3.medium" }
-    prod = { desired = 2, min = 2, max = 3, instance_type = "t3.medium" }
+    prod = { desired = 2, min = 2, max = 4, instance_type = "t3.medium" }
   }
 
   cluster_name    = aws_eks_cluster.main.name
