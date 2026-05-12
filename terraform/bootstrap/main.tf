@@ -25,9 +25,6 @@ locals {
 resource "aws_s3_bucket" "state" {
   bucket = local.bucket_name
 
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_s3_bucket_versioning" "state" {
@@ -106,10 +103,6 @@ resource "aws_route53_record" "resend_dkim" {
   type    = "TXT"
   ttl     = 300
   records = ["p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDYt6bJ0o45vf8BRJ1o4oyOD1UYxrWUpq0vWobBxDfTFGl3cf1A6DiaO4HqVhaOo/Ww9pQqzx75dnBUGmW17LsY57N/y3QDANtAUOw5LsIa1dkCnlfJD2mBM06NisxZviJftdxso6vn/G1Gel3FzuNs+WvwI6z0gMPjRrI+qe1b/QIDAQAB"]
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_route53_record" "resend_spf_mx" {
@@ -118,10 +111,6 @@ resource "aws_route53_record" "resend_spf_mx" {
   type    = "MX"
   ttl     = 300
   records = ["10 feedback-smtp.us-east-1.amazonses.com"]
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_route53_record" "resend_spf_txt" {
@@ -130,10 +119,6 @@ resource "aws_route53_record" "resend_spf_txt" {
   type    = "TXT"
   ttl     = 300
   records = ["v=spf1 include:amazonses.com ~all"]
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_route53_record" "dmarc" {
@@ -142,8 +127,4 @@ resource "aws_route53_record" "dmarc" {
   type    = "TXT"
   ttl     = 300
   records = ["v=DMARC1; p=none;"]
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
