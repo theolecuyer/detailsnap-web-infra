@@ -9,7 +9,7 @@ images:
     newName: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/media-service
     newTag: v1.0.1
   - name: 651084712750.dkr.ecr.us-east-1.amazonaws.com/detailsnap/media-service
-    newTag: v1.2.0
+    newTag: v1.3.0
 patches:
   - patch: |-
       - op: replace
